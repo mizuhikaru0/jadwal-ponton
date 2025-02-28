@@ -1,17 +1,5 @@
 const intents = [
   {
-    intent: "salam",
-    pattern: /^(hai|halo|hello|selamat (pagi|siang|sore|malam))$/i,
-    keywords: ["hai","halo","hello","selamat"],
-    responses: [
-  "Hai, juga!",
-  "Halo! Ada yang bisa saya bantu?",
-  "Hello! Selamat datang!",
-  "halo juga! mau nanya apa? :)",
-  "besok ponton pertama dari wm mulai jam 8 tepat"
-]
-  },
-  {
     intent: "nama",
     pattern: /(nama kamu siapa|siapa namamu|siapa nama kamu|siapa kamu|siapa kamu\??)/i,
     keywords: ["nama","siapa"],
@@ -28,16 +16,6 @@ const intents = [
   "Sampai jumpa!",
   "Selamat tinggal! Semoga harimu menyenangkan.",
   "Dadah, sampai jumpa lagi!"
-]
-  },
-  {
-    intent: "sapaan_bang",
-    pattern: /^(bang|abang|bro|kak)$/i,
-    keywords: ["bang","abang","bro","kak"],
-    responses: [
-  "Eh, ada apa nih, bang?",
-  "Siap, bang! Mau tanya apa?",
-  "Bang, ada yang bisa gue bantu?"
 ]
   },
   {
@@ -90,10 +68,20 @@ const intents = [
   },
   {
     intent: "sapaan",
-    pattern: /halo\?/i,
+    pattern: /halo/i,
     keywords: ["sapaan"],
     responses: [
-  "Iya, halo, ada yang bisa saya bantu?"
+  "Iya, halo, ada yang bisa saya bantu?",
+  "Iya haloo, ada yang bisa saya bantu?"
+]
+  },
+  {
+    intent: "puasa",
+    pattern: /hari.*puasa.*libur\?/i,
+    keywords: ["puasa"],
+    responses: [
+  "enggaklah",
+  "Enggak kok"
 ]
   },
 ];

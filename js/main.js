@@ -117,9 +117,11 @@ function initializeChatbot() {
   function appendMessageToChatOutput(type, text) {
     const messageElem = document.createElement("div");
     messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    messageElem.textContent = text;
+    // Mengubah newline menjadi <br> agar mendukung baris baru
+    messageElem.innerHTML = text.replace(/\n/g, "<br>");
     chatOutput.appendChild(messageElem);
   }
+  
 
   // Fungsi untuk memuat riwayat chat dari localStorage
   function loadChatHistory() {

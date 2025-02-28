@@ -21,6 +21,20 @@ class Chatbot {
     this.lastUserQuestion = "";
   }
 
+  // === Fungsi Pembantu: Memformat Respon Teks ===
+  formatResponse(response) {
+    if (typeof response !== "string") return response;
+    // Ganti newline menjadi <br>
+    let formatted = response.replace(/\n/g, "<br>");
+    // Ganti **teks** menjadi bold
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    // Ganti _teks_ menjadi italic
+    formatted = formatted.replace(/_(.*?)_/g, "<em>$1</em>");
+    // Ganti __teks__ menjadi underline
+    formatted = formatted.replace(/__(.*?)__/g, "<u>$1</u>");
+    return formatted;
+  }
+
   // === Manajemen Konteks ===
   updateContext(intent, message, extra = {}) {
     this.context = {
@@ -53,18 +67,6 @@ class Chatbot {
 
   // === Analisis Pesan ===
   analyzeComplexMessage(message) {
-    if (/\b(bagaimana|kenapa|mengapa|apakah)\b/.test(message) && message.split(" ").length > 10) {
-      return "Pertanyaan yang kompleks ya, bisa dijelaskan lebih spesifik lagi?";
-    }
-    if (/\b(jika|kalau)\b/.test(message)) {
-      if (/bagaimana.*(jika|kalau)/.test(message)) {
-        return "Sepertinya Anda bertanya tentang skenario atau kondisi. Bisa dijelaskan lebih spesifik?";
-      }
-      return "Kondisional terdengar menarik, bisa berikan konteks lebih lanjut?";
-    }
-    if (/\b(gue|lo|bro|sis)\b/.test(message)) {
-      return "Sepertinya Anda menggunakan bahasa gaul. Bisa dijelaskan maksudnya agar saya lebih memahami?";
-    }
     return null;
   }
 
@@ -186,33 +188,7 @@ class Chatbot {
   }
 
   // === Penanganan Jadwal Spesifik dengan Peningkatan ---
-  handleSpecificSchedule(message) {
-    if (this.context.lastIntent === "jadwal_spesifik") {
-      if (
-        message.includes("sore") &&
-        (message.includes("penyebrangan") || message.includes("jam")) &&
-        !message.includes("tanah merah") &&
-        !message.includes("muara") &&
-        !message.includes("wm")
-      ) {
-        return "Untuk jadwal penyebrangan sore, silakan tentukan rute yang Anda maksud, misalnya 'dari tanah merah ke wm' atau 'dari muara ke tanah merah'.";
-      }
-      if (message.includes("sore") && message.includes("tanah merah") && message.includes("wm")) {
-        return "Jadwal penyebrangan sore dari Tanah Merah ke Muara: 14.00, 16.00, dan 17.30 WIB.";
-      }
-      const routes = {
-        "muara tanah merah": "Jadwal dari Muara ke Tanah Merah: 08.00, 10.00, 13.00, 15.00, 17.00 WIB. Khusus Jumat, ada tambahan jam 13.30 WIB.",
-        "tanah merah muara": "Jadwal dari Tanah Merah ke Muara: 09.00, 11.00, 14.00, 16.00, 17.30 WIB."
-      };
-      for (const [route, schedule] of Object.entries(routes)) {
-        if (route.split(" ").every((loc) => message.includes(loc))) {
-          return schedule;
-        }
-      }
-      if (message.includes("jumat")) {
-        return "Pada hari Jumat, ada jadwal tambahan dari Muara ke Tanah Merah pada jam 13.30 WIB.";
-      }
-    }
+  handleSpecificSchedule() {
     return null;
   }
 
@@ -225,13 +201,13 @@ class Chatbot {
       if (this.connectionStage === "awaiting_confirmation") {
         if (message.toLowerCase() === "ya") {
           this.connectionStage = "awaiting_petugas_choice";
-          return "Silakan pilih petugas: 1. Riko (Nahkoda Ponton) atau 2. Ihsan Maulana (ABK Ponton)";
+          return this.formatResponse("Silakan pilih petugas:\n1. **Riko (Nahkoda Ponton)**\n2. **Ihsan Maulana (ABK Ponton)**");
         } else if (message.toLowerCase() === "tidak") {
           this.connectionModeActive = false;
           this.connectionStage = null;
-          return "Baik, sesi ditutup.";
+          return this.formatResponse("Baik, sesi ditutup.");
         } else {
-          return "Mohon jawab dengan 'Ya' atau 'Tidak'.";
+          return this.formatResponse("Mohon jawab dengan **Ya** atau **Tidak**.");
         }
       } else if (this.connectionStage === "awaiting_petugas_choice") {
         // Gunakan lastUserQuestion sebagai prefill pesan WhatsApp
@@ -240,14 +216,14 @@ class Chatbot {
           window.location.href = "https://wa.me/6282252869605?text=" + prefill;
           this.connectionModeActive = false;
           this.connectionStage = null;
-          return "Mengalihkan ke WhatsApp Riko (Nahkoda Ponton)...";
+          return this.formatResponse("Mengalihkan ke WhatsApp **Riko (Nahkoda Ponton)**...");
         } else if (message === "2") {
           window.location.href = "https://wa.me/6282211061254?text=" + prefill;
           this.connectionModeActive = false;
           this.connectionStage = null;
-          return "Mengalihkan ke WhatsApp Ihsan Maulana (ABK Ponton)...";
+          return this.formatResponse("Mengalihkan ke WhatsApp **Ihsan Maulana (ABK Ponton)**...");
         } else {
-          return "Mohon pilih 1 atau 2.";
+          return this.formatResponse("Mohon pilih **1** atau **2**.");
         }
       }
     }
@@ -257,11 +233,11 @@ class Chatbot {
       if (this.learningStage === "awaiting_intent") {
         this.learningInfo.intent = message;
         this.learningStage = "awaiting_question";
-        return "Oke, intent diterima, kemudian masukkan pertanyaan.";
+        return this.formatResponse("Oke, intent diterima, kemudian masukkan pertanyaan.");
       } else if (this.learningStage === "awaiting_question") {
         this.learningInfo.question = message;
         this.learningStage = "awaiting_response";
-        return "Oke, masukkan respon.";
+        return this.formatResponse("Oke, masukkan respon.");
       } else if (this.learningStage === "awaiting_response") {
         this.learningInfo.response = message;
         const result = this.learnFromFeedback(
@@ -274,7 +250,7 @@ class Chatbot {
         this.learningModeActive = false;
         this.learningStage = null;
         this.learningInfo = {};
-        return result;
+        return this.formatResponse(result);
       }
     }
 
@@ -283,38 +259,38 @@ class Chatbot {
       this.learningModeActive = true;
       this.learningStage = "awaiting_intent";
       this.learningInfo = {};
-      return "Baik, silahkan masukkan intent.";
+      return this.formatResponse("Baik, silahkan masukkan intent.");
     }
 
     // --- Proses Pesan Biasa ---
     if (message.toLowerCase() === "p") {
-      return "Iya ada apa?";
+      return this.formatResponse("Iya ada apa?");
     }
 
     if (this.learningData[message]) {
-      return this.learningData[message];
+      return this.formatResponse(this.learningData[message]);
     }
 
     if (this.context.lastIntent && this.isFollowUp(message.toLowerCase())) {
       const followUpResponse = this.handleFollowUp();
-      if (followUpResponse) return followUpResponse;
+      if (followUpResponse) return this.formatResponse(followUpResponse);
     }
 
     const intentResponse = this.processIntents(message.toLowerCase());
     if (intentResponse) {
       const specificScheduleResponse = this.handleSpecificSchedule(message.toLowerCase());
-      if (specificScheduleResponse) return specificScheduleResponse;
-      return intentResponse;
+      if (specificScheduleResponse) return this.formatResponse(specificScheduleResponse);
+      return this.formatResponse(intentResponse);
     }
 
     const complexResponse = this.analyzeComplexMessage(message.toLowerCase());
-    if (complexResponse) return complexResponse;
+    if (complexResponse) return this.formatResponse(complexResponse);
 
     // --- Jika tidak ada kecocokan di database knowledge ---
     this.lastUserQuestion = message; // Simpan pesan asli pengguna
     this.connectionModeActive = true;
     this.connectionStage = "awaiting_confirmation";
-    return "Maaf, saya masih dalam tahap belajar. Apakah Anda mau dihubungkan ke petugas terkait? (Ya/Tidak)";
+    return this.formatResponse("Maaf, saya masih dalam tahap belajar.\nApakah Anda mau dihubungkan ke petugas terkait? (Ya/Tidak)");
   }
 }
 
