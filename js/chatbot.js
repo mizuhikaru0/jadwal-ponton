@@ -235,7 +235,7 @@ class Chatbot {
         }
       } else if (this.connectionStage === "awaiting_petugas_choice") {
         // Gunakan lastUserQuestion sebagai prefill pesan WhatsApp
-        const prefill = encodeURIComponent("Pertanyaan saya: " + this.lastUserQuestion);
+        const prefill = encodeURIComponent(this.lastUserQuestion);
         if (message === "1") {
           window.location.href = "https://wa.me/6282252869605?text=" + prefill;
           this.connectionModeActive = false;

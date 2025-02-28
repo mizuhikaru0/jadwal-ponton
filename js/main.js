@@ -64,6 +64,17 @@ function initializeChatbot() {
     });
   }
 
+  // Inisialisasi tombol reset chat
+  const resetChatBtn = document.getElementById("resetChatBtn");
+  if (resetChatBtn && chatOutput) {
+    resetChatBtn.addEventListener("click", () => {
+      // Hapus sesi chat dari localStorage
+      localStorage.removeItem("chatSession");
+      // Bersihkan panel chat
+      chatOutput.innerHTML = "";
+    });
+  }
+
   // Penanganan event ketika pengguna mengirim pesan melalui form Chatbot
   if (chatForm && chatInput && chatOutput) {
     chatForm.addEventListener("submit", (event) => {
