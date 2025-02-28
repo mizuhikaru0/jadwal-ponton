@@ -88,6 +88,14 @@ const intents = [
   "Ponton nggak pernah liburan kok"
 ]
   },
+  {
+    intent: "sapaan",
+    pattern: /halo\?/i,
+    keywords: ["sapaan"],
+    responses: [
+  "Iya, halo, ada yang bisa saya bantu?"
+]
+  },
 ];
 
 export default intents;
