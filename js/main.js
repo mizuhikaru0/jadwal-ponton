@@ -104,20 +104,22 @@ function initializeChatbot() {
       setTimeout(() => {
         botLoaderElem.remove();
         const botResponse = chatbot.getResponse(userMessage);
-        appendMessageWithTypingEffect("bot", botResponse);
-        addMessageToSession("bot", botResponse);
-
-        // Tutup modal secara otomatis jika respon mengandung "Baik, sesi ditutup"
-        if (botResponse.includes("Baik, sesi ditutup")) {
-          let modalElement = document.getElementById("chatbotModal");
-          let modalInstance = bootstrap.Modal.getInstance(modalElement);
-          if (modalInstance) {
-            modalInstance.hide();
-          } else {
-            modalInstance = new bootstrap.Modal(modalElement);
-            modalInstance.hide();
+        
+        // Panggil fungsi dengan callback opsional untuk penutupan modal
+        appendMessageWithTypingEffect("bot", botResponse, () => {
+          // Callback: Cek apakah respon mengandung "Baik, sesi ditutup"
+          if (botResponse.includes("Baik, sesi ditutup")) {
+            // Tunggu sedikit agar user dapat membaca teksnya
+            setTimeout(() => {
+              let modalInstance = bootstrap.Modal.getInstance(chatbotModal);
+              if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(chatbotModal);
+              }
+              modalInstance.hide();
+            }, 500);
           }
-        }
+        });
+        addMessageToSession("bot", botResponse);
       }, 1500);
     });
   } else {
@@ -133,10 +135,10 @@ function initializeChatbot() {
     chatOutput.appendChild(messageElem);
   }
 
-  // Fungsi untuk menampilkan pesan dengan efek mengetik
-  function appendMessageWithTypingEffect(type, formattedText) {
+  // Fungsi untuk menampilkan pesan dengan efek mengetik dengan callback opsional
+  function appendMessageWithTypingEffect(type, formattedText, callback) {
     // Ambil plain text dari formattedText tanpa tag HTML
-    const tempDiv = document.createElement("div");
+    const tempDiv = document.createElement('div');
     tempDiv.innerHTML = formattedText;
     let plainText = tempDiv.innerText;
     
@@ -155,6 +157,10 @@ function initializeChatbot() {
       messageElem.innerHTML = formattedText;
       messageElem.style.whiteSpace = "pre-wrap";
       chatOutput.scrollTop = chatOutput.scrollHeight;
+      // Panggil callback opsional jika ada
+      if (callback && typeof callback === "function") {
+        callback();
+      }
     });
   }
 
