@@ -102,11 +102,11 @@ const intents = [
   },
   {
     intent: "penutupan",
-    pattern: /ok/i,
+    pattern: /^ok$/i,
     keywords: ["penutupan"],
     responses: [
-  "Baik, kalau ada yang ditanyakan lagi, hubungi saya"
-]
+      "Baik, kalau ada yang ditanyakan lagi, hubungi saya"
+    ]
   },
   {
     intent: "tanya-jadwal-pagi",
