@@ -32,8 +32,11 @@ class Chatbot {
     formatted = formatted.replace(/_(.*?)_/g, "<em>$1</em>");
     // Ganti __teks__ menjadi underline
     formatted = formatted.replace(/__(.*?)__/g, "<u>$1</u>");
+    // Tambahkan: Ganti ~~teks~~ menjadi line-through
+    formatted = formatted.replace(/~~(.*?)~~/g, "<del>$1</del>");
     return formatted;
   }
+  
 
   // === Manajemen Konteks ===
   updateContext(intent, message, extra = {}) {
