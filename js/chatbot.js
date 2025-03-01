@@ -2,43 +2,32 @@ import knowledge from "./knowledge.js";
 
 class Chatbot {
   constructor() {
-    this.intents = knowledge; // Basis pengetahuan
-    this.context = {}; // Menyimpan konteks percakapan
-    this.learningData = {}; // Menyimpan data pembelajaran yang sudah diterapkan
-    this.pendingFeedback = {}; // Menyimpan umpan balik untuk direview
+    this.intents = knowledge;
+    this.context = {};
+    this.learningData = {}; 
+    this.pendingFeedback = {};
     this.stopWords = ["yang", "untuk", "dan", "di", "ke", "dari", "ini", "itu", "pada", "saja", "ada", "dengan", "sebagai", "atau"];
 
-    // Mode pelatihan interaktif
     this.learningModeActive = false;
     this.learningStage = null;
     this.learningInfo = {}; // { intent, question, response }
 
-    // Mode koneksi ke petugas (untuk pertanyaan yang belum ada di database)
     this.connectionModeActive = false;
     this.connectionStage = null;
 
-    // Properti untuk menyimpan pesan pengguna yang tidak dikenali
     this.lastUserQuestion = "";
   }
 
-  // === Fungsi Pembantu: Memformat Respon Teks ===
   formatResponse(response) {
     if (typeof response !== "string") return response;
-    // Ganti newline menjadi <br>
     let formatted = response.replace(/\n/g, "<br>");
-    // Ganti **teks** menjadi bold
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    // Ganti _teks_ menjadi italic
     formatted = formatted.replace(/_(.*?)_/g, "<em>$1</em>");
-    // Ganti __teks__ menjadi underline
     formatted = formatted.replace(/__(.*?)__/g, "<u>$1</u>");
-    // Tambahkan: Ganti ~~teks~~ menjadi line-through
     formatted = formatted.replace(/~~(.*?)~~/g, "<del>$1</del>");
     return formatted;
   }
   
-
-  // === Manajemen Konteks ===
   updateContext(intent, message, extra = {}) {
     this.context = {
       ...this.context,
@@ -52,7 +41,6 @@ class Chatbot {
     this.context = {};
   }
 
-  // === Penanganan Follow-Up ===
   isFollowUp(message) {
     const followUpIndicators = ["itu", "tersebut", "yang tadi", "lanjut", "selanjutnya"];
     return followUpIndicators.some((indicator) => message.includes(indicator));
@@ -68,17 +56,14 @@ class Chatbot {
     }
   }
 
-  // === Analisis Pesan ===
   analyzeComplexMessage(message) {
     return null;
   }
 
-  // === Ekstraksi Keyword dengan optimasi ===
   extractKeywords(message) {
     return message.split(" ").filter((word) => word.length > 3 && !this.stopWords.includes(word));
   }
 
-  // === Fungsi Pembantu: Parsing Regex dari string --- 
   _parseRegex(regexString) {
     if (regexString.startsWith("/") && regexString.lastIndexOf("/") > 0) {
       const lastSlash = regexString.lastIndexOf("/");
@@ -89,14 +74,12 @@ class Chatbot {
     return new RegExp(regexString, "i");
   }
 
-  // === Fungsi untuk Menghasilkan Pattern Otomatis dari Teks Pertanyaan --- 
   generatePatternFromText(text) {
     const words = text.split(/\s+/).filter(word => word.length > 0);
     const patternStr = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(".*");
     return new RegExp(patternStr, "i");
   }
 
-  // === Pembelajaran Umpan Balik dengan Generator & Download (Diperbarui) ===
   learnFromFeedback(feedback, targetIntent, targetQuestion, targetPattern, targetResponses) {
     let intentObj = null;
     if (targetIntent) {
@@ -138,7 +121,6 @@ class Chatbot {
     return "Baik, informasi telah diterima, dan akan ditambahkan.";
   }
 
-  // === Fungsi Generator untuk Menghasilkan Kode knowledge.js --- 
   generateKnowledgeCode() {
     let code = "const intents = [\n";
     this.intents.forEach((intent) => {
@@ -168,7 +150,6 @@ class Chatbot {
     URL.revokeObjectURL(url);
   }
 
-  // === Pemrosesan Intent dengan Keyword Matching --- 
   processIntents(message) {
     for (const intent of this.intents) {
       if (intent.pattern.test(message)) {
@@ -189,7 +170,6 @@ class Chatbot {
     return null;
   }
 
-  // === Penanganan Jadwal Spesifik dengan Peningkatan --- 
   handleSpecificSchedule() {
     return null;
   }
@@ -198,7 +178,6 @@ class Chatbot {
   getResponse(rawMessage) {
     const message = rawMessage.trim();
 
-    // --- Mode Koneksi ke Petugas ---
     if (this.connectionModeActive) {
       if (this.connectionStage === "awaiting_confirmation") {
         if (message.toLowerCase() === "ya") {
@@ -212,7 +191,7 @@ class Chatbot {
           return this.formatResponse("Mohon jawab dengan **Ya** atau **Tidak**.");
         }
       } else if (this.connectionStage === "awaiting_petugas_choice") {
-        // Gunakan lastUserQuestion sebagai prefill pesan WhatsApp
+        
         const prefill = encodeURIComponent(this.lastUserQuestion);
         if (message === "1") {
           window.location.href = "https://wa.me/6282252869605?text=" + prefill;
@@ -230,7 +209,6 @@ class Chatbot {
       }
     }
 
-    // --- Mode Pelatihan Interaktif ---
     if (this.learningModeActive) {
       if (this.learningStage === "awaiting_intent") {
         this.learningInfo.intent = message;
