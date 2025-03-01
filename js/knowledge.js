@@ -108,6 +108,14 @@ const intents = [
   "Baik, kalau ada yang ditanyakan lagi, hubungi saya"
 ]
   },
+  {
+    intent: "tanya-jadwal-pagi",
+    pattern: /Mau.*nanya.*jadwal.*ponton.*besok.*kalau.*dari.*wm.*ke.*tanah.*merah.*jam.*berapa.*ya\?/i,
+    keywords: ["tanya-jadwal-pagi"],
+    responses: [
+  "Besok jadwal penyebrangan ponton dari WM ke Tanah Merah itu dimulai jam 8 pagi. Selain itu, ada juga keberangkatan jam 10 pagi, jam 1 siang, jam 3 sore, dan terakhir jam 5 sore. Semoga membantu!"
+]
+  },
 ];
 
 export default intents;
