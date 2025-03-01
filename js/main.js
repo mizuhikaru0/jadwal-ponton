@@ -185,7 +185,7 @@ function initializeChatbot() {
     localStorage.setItem("chatSession", JSON.stringify(session));
   }
 
-  // Fungsi untuk menghapus loader dengan transisi fade-out
+  // Menghapus loader dengan transisi fade-out
   function removeLoaderWithTransition(loaderElem) {
     loaderElem.style.opacity = 0;
     setTimeout(() => {
