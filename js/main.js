@@ -1,4 +1,3 @@
-// js/main.js
 import { updateTheme, toggleTheme } from "./theme.js";
 import { renderSchedules, startCountdown } from "./schedule.js";
 import { renderSavedRequests, handleWaitRequest } from "./waitRequest.js";
@@ -6,10 +5,8 @@ import { renderTariffInfo } from "./tarif.js";
 import { renderRouteInfo } from "./rute.js";
 import Chatbot from "./chatbot.js";
 
-// Agar fungsi toggleTheme dapat diakses secara global dari HTML
 window.toggleTheme = toggleTheme;
 
-// Pasang event listener pada form permintaan (waitRequest)
 const waitRequestForm = document.getElementById("waitRequestForm");
 if (waitRequestForm) {
   waitRequestForm.addEventListener("submit", handleWaitRequest);
@@ -22,27 +19,21 @@ function initializeApp() {
   renderSavedRequests();
   renderTariffInfo();
   renderRouteInfo();
-  initializeChatbot(); // Inisialisasi Chatbot
+  initializeChatbot();
 }
 
 initializeApp();
 
-// Fungsi untuk mengintegrasikan Chatbot ke dalam modal dengan loader dinamis dan penyimpanan sesi chat.
 function initializeChatbot() {
   const chatbot = new Chatbot();
-
-  // Ambil elemen-elemen Chatbot dari modal
   const chatForm = document.getElementById("chatForm");
   const chatInput = document.getElementById("chatInput");
   const chatOutput = document.getElementById("chatOutput");
   const chatbotModal = document.getElementById("chatbotModal");
 
-  // Saat modal Chatbot dibuka, kosongkan panel chat dan tampilkan loader dinamis
   if (chatbotModal && chatOutput) {
     chatbotModal.addEventListener("show.bs.modal", () => {
-      // Kosongkan panel chat
       chatOutput.innerHTML = "";
-      // Buat elemen loader dinamis
       const loaderElem = document.createElement("div");
       loaderElem.id = "chatLoader";
       loaderElem.innerHTML = `
@@ -54,7 +45,6 @@ function initializeChatbot() {
       chatOutput.appendChild(loaderElem);
     });
 
-    // Setelah modal tampil, hapus loader dan muat riwayat chat dengan transisi smooth
     chatbotModal.addEventListener("shown.bs.modal", () => {
       setTimeout(() => {
         const loaderElem = document.getElementById("chatLoader");
@@ -64,31 +54,23 @@ function initializeChatbot() {
     });
   }
 
-  // Inisialisasi tombol reset chat
   const resetChatBtn = document.getElementById("resetChatBtn");
   if (resetChatBtn && chatOutput) {
     resetChatBtn.addEventListener("click", () => {
-      // Hapus sesi chat dari localStorage
       localStorage.removeItem("chatSession");
-      // Bersihkan panel chat
       chatOutput.innerHTML = "";
     });
   }
 
-  // Penanganan event ketika pengguna mengirim pesan melalui form Chatbot
   if (chatForm && chatInput && chatOutput) {
     chatForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const userMessage = chatInput.value.trim();
       if (!userMessage) return;
-
-      // Tampilkan pesan pengguna pada panel chat dan simpan ke sesi
       appendMessageToChatOutput("user", userMessage);
       addMessageToSession("user", userMessage);
       chatInput.value = "";
       chatOutput.scrollTop = chatOutput.scrollHeight;
-
-      // Tampilkan loader dinamis untuk respon bot
       const botLoaderElem = document.createElement("div");
       botLoaderElem.classList.add("chat-message", "bot-message");
       botLoaderElem.innerHTML = `
@@ -99,17 +81,11 @@ function initializeChatbot() {
       `;
       chatOutput.appendChild(botLoaderElem);
       chatOutput.scrollTop = chatOutput.scrollHeight;
-
-      // Simulasikan delay respon bot (1,5 detik) lalu tampilkan efek mengetik
       setTimeout(() => {
         botLoaderElem.remove();
         const botResponse = chatbot.getResponse(userMessage);
-        
-        // Panggil fungsi dengan callback opsional untuk penutupan modal
         appendMessageWithTypingEffect("bot", botResponse, () => {
-          // Callback: Cek apakah respon mengandung "Baik, sesi ditutup"
           if (botResponse.includes("Baik, sesi ditutup")) {
-            // Tunggu sedikit agar user dapat membaca teksnya
             setTimeout(() => {
               let modalInstance = bootstrap.Modal.getInstance(chatbotModal);
               if (!modalInstance) {
@@ -126,48 +102,35 @@ function initializeChatbot() {
     console.log("Elemen Chatbot tidak ditemukan.");
   }
 
-  // Fungsi untuk menampilkan pesan pada panel chat secara langsung
   function appendMessageToChatOutput(type, text) {
     const messageElem = document.createElement("div");
     messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    // Ubah newline menjadi <br> agar mendukung baris baru
     messageElem.innerHTML = text.replace(/\n/g, "<br>");
     chatOutput.appendChild(messageElem);
   }
 
-  // Fungsi untuk menampilkan pesan dengan efek mengetik dengan callback opsional
   function appendMessageWithTypingEffect(type, formattedText, callback) {
-    // Ambil plain text dari formattedText tanpa tag HTML
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = formattedText;
     let plainText = tempDiv.innerText;
-    
-    // Sisipkan spasi setelah tanda titik jika tidak ada spasi
     plainText = plainText.replace(/\.([^ \n])/g, ". $1");
-    
     const messageElem = document.createElement("div");
     messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    // Pastikan properti CSS white-space aktif agar spasi dan baris baru dipertahankan
     messageElem.style.whiteSpace = "pre-wrap";
     chatOutput.appendChild(messageElem);
-    
-    // Efek mengetik berdasarkan plainText
     typeMessage(messageElem, plainText, 50, () => {
-      // Setelah efek mengetik selesai, ganti konten dengan formattedText yang sudah lengkap
       messageElem.innerHTML = formattedText;
       messageElem.style.whiteSpace = "pre-wrap";
       chatOutput.scrollTop = chatOutput.scrollHeight;
-      // Panggil callback opsional jika ada
       if (callback && typeof callback === "function") {
         callback();
       }
     });
   }
 
-  // Fungsi untuk mengetik teks secara perlahan ke dalam elemen
   function typeMessage(element, text, delay = 50, callback) {
     let i = 0;
-    element.textContent = ""; // Mulai dengan teks kosong
+    element.textContent = "";
     const interval = setInterval(() => {
       element.textContent += text.charAt(i);
       i++;
@@ -178,9 +141,7 @@ function initializeChatbot() {
     }, delay);
   }
 
-  // Fungsi untuk memuat riwayat chat dari localStorage
   function loadChatHistory() {
-    // Pastikan panel chat kosong
     chatOutput.innerHTML = "";
     const session = loadChatSession();
     session.forEach(message => {
@@ -188,13 +149,11 @@ function initializeChatbot() {
     });
   }
 
-  // Fungsi untuk mengambil sesi chat dari localStorage dengan batas waktu 24 jam
   function loadChatSession() {
     const sessionData = localStorage.getItem("chatSession");
     if (sessionData) {
       const session = JSON.parse(sessionData);
       const now = Date.now();
-      // Jika sesi lebih dari 24 jam, hapus sesi dan kembalikan array kosong
       if (now - session.timestamp > 86400000) {
         localStorage.removeItem("chatSession");
         return [];
@@ -205,24 +164,21 @@ function initializeChatbot() {
     return [];
   }
 
-  // Fungsi untuk menambahkan pesan ke sesi chat dan menyimpannya ke localStorage
   function addMessageToSession(type, text) {
     const now = Date.now();
     let session = { timestamp: now, messages: [] };
     const sessionData = localStorage.getItem("chatSession");
     if (sessionData) {
       session = JSON.parse(sessionData);
-      // Jangan perbarui timestamp agar sesi tetap mengacu pada waktu pembuatan awal
     }
     session.messages.push({ type, text });
     localStorage.setItem("chatSession", JSON.stringify(session));
   }
 
-  // Menghapus loader dengan transisi fade-out
   function removeLoaderWithTransition(loaderElem) {
     loaderElem.style.opacity = 0;
     setTimeout(() => {
       loaderElem.remove();
-    }, 500); // Durasi sesuai dengan animasi fade-out
+    }, 500);
   }
 }
