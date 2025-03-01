@@ -104,9 +104,20 @@ function initializeChatbot() {
       setTimeout(() => {
         botLoaderElem.remove();
         const botResponse = chatbot.getResponse(userMessage);
-        // Tampilkan efek mengetik untuk respon bot
         appendMessageWithTypingEffect("bot", botResponse);
         addMessageToSession("bot", botResponse);
+
+        // Tutup modal secara otomatis jika respon mengandung "Baik, sesi ditutup"
+        if (botResponse.includes("Baik, sesi ditutup")) {
+          let modalElement = document.getElementById("chatbotModal");
+          let modalInstance = bootstrap.Modal.getInstance(modalElement);
+          if (modalInstance) {
+            modalInstance.hide();
+          } else {
+            modalInstance = new bootstrap.Modal(modalElement);
+            modalInstance.hide();
+          }
+        }
       }, 1500);
     });
   } else {
@@ -117,35 +128,37 @@ function initializeChatbot() {
   function appendMessageToChatOutput(type, text) {
     const messageElem = document.createElement("div");
     messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    // Pastikan menggunakan innerHTML agar tag HTML dirender
+    // Ubah newline menjadi <br> agar mendukung baris baru
     messageElem.innerHTML = text.replace(/\n/g, "<br>");
     chatOutput.appendChild(messageElem);
   }
-  
 
   // Fungsi untuk menampilkan pesan dengan efek mengetik
   function appendMessageWithTypingEffect(type, formattedText) {
     // Ambil plain text dari formattedText tanpa tag HTML
-    const tempDiv = document.createElement('div');
+    const tempDiv = document.createElement("div");
     tempDiv.innerHTML = formattedText;
-    const plainText = tempDiv.innerText;
+    let plainText = tempDiv.innerText;
+    
+    // Sisipkan spasi setelah tanda titik jika tidak ada spasi
+    plainText = plainText.replace(/\.([^ \n])/g, ". $1");
     
     const messageElem = document.createElement("div");
     messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    // Set properti untuk menjaga spasi dan baris baru
+    // Pastikan properti CSS white-space aktif agar spasi dan baris baru dipertahankan
     messageElem.style.whiteSpace = "pre-wrap";
     chatOutput.appendChild(messageElem);
     
     // Efek mengetik berdasarkan plainText
     typeMessage(messageElem, plainText, 50, () => {
-      // Setelah selesai mengetik, ganti dengan konten formatted yang sudah utuh
+      // Setelah efek mengetik selesai, ganti konten dengan formattedText yang sudah lengkap
       messageElem.innerHTML = formattedText;
-      // Pastikan properti CSS tetap aktif setelah update
       messageElem.style.whiteSpace = "pre-wrap";
       chatOutput.scrollTop = chatOutput.scrollHeight;
     });
   }
-  
+
+  // Fungsi untuk mengetik teks secara perlahan ke dalam elemen
   function typeMessage(element, text, delay = 50, callback) {
     let i = 0;
     element.textContent = ""; // Mulai dengan teks kosong
@@ -158,9 +171,6 @@ function initializeChatbot() {
       }
     }, delay);
   }
-  
-  
-  
 
   // Fungsi untuk memuat riwayat chat dari localStorage
   function loadChatHistory() {
