@@ -54,11 +54,11 @@ function initializeChatbot() {
       chatOutput.appendChild(loaderElem);
     });
 
-    // Setelah modal tampil, hapus loader dan muat riwayat chat (jika ada) setelah 1 detik
+    // Setelah modal tampil, hapus loader dan muat riwayat chat dengan transisi smooth
     chatbotModal.addEventListener("shown.bs.modal", () => {
       setTimeout(() => {
         const loaderElem = document.getElementById("chatLoader");
-        if (loaderElem) loaderElem.remove();
+        if (loaderElem) removeLoaderWithTransition(loaderElem);
         loadChatHistory();
       }, 1000);
     });
@@ -100,28 +100,50 @@ function initializeChatbot() {
       chatOutput.appendChild(botLoaderElem);
       chatOutput.scrollTop = chatOutput.scrollHeight;
 
-      // Simulasikan delay respon bot (1,5 detik)
+      // Simulasikan delay respon bot (1,5 detik) lalu tampilkan efek mengetik
       setTimeout(() => {
         botLoaderElem.remove();
         const botResponse = chatbot.getResponse(userMessage);
-        appendMessageToChatOutput("bot", botResponse);
+        // Tampilkan efek mengetik untuk respon bot
+        appendMessageWithTypingEffect("bot", botResponse);
         addMessageToSession("bot", botResponse);
-        chatOutput.scrollTop = chatOutput.scrollHeight;
       }, 1500);
     });
   } else {
     console.log("Elemen Chatbot tidak ditemukan.");
   }
 
-  // Fungsi untuk menampilkan pesan pada panel chat
+  // Fungsi untuk menampilkan pesan pada panel chat secara langsung
   function appendMessageToChatOutput(type, text) {
     const messageElem = document.createElement("div");
     messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    // Mengubah newline menjadi <br> agar mendukung baris baru
+    // Ubah newline menjadi <br> agar mendukung baris baru
     messageElem.innerHTML = text.replace(/\n/g, "<br>");
     chatOutput.appendChild(messageElem);
   }
-  
+
+  // Fungsi untuk menampilkan pesan dengan efek mengetik
+  function appendMessageWithTypingEffect(type, text) {
+    const messageElem = document.createElement("div");
+    messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
+    chatOutput.appendChild(messageElem);
+    typeMessage(messageElem, text, 50, () => {
+      chatOutput.scrollTop = chatOutput.scrollHeight;
+    });
+  }
+
+  // Fungsi untuk mengetik teks secara perlahan ke dalam elemen
+  function typeMessage(element, text, delay = 50, callback) {
+    let i = 0;
+    const interval = setInterval(() => {
+      element.innerHTML += text.charAt(i);
+      i++;
+      if (i >= text.length) {
+        clearInterval(interval);
+        if (callback) callback();
+      }
+    }, delay);
+  }
 
   // Fungsi untuk memuat riwayat chat dari localStorage
   function loadChatHistory() {
@@ -139,7 +161,7 @@ function initializeChatbot() {
     if (sessionData) {
       const session = JSON.parse(sessionData);
       const now = Date.now();
-      // Jika sesi lebih dari 24 jam (86400000 ms), hapus sesi dan kembalikan array kosong
+      // Jika sesi lebih dari 24 jam, hapus sesi dan kembalikan array kosong
       if (now - session.timestamp > 86400000) {
         localStorage.removeItem("chatSession");
         return [];
@@ -161,5 +183,13 @@ function initializeChatbot() {
     }
     session.messages.push({ type, text });
     localStorage.setItem("chatSession", JSON.stringify(session));
+  }
+
+  // Fungsi untuk menghapus loader dengan transisi fade-out
+  function removeLoaderWithTransition(loaderElem) {
+    loaderElem.style.opacity = 0;
+    setTimeout(() => {
+      loaderElem.remove();
+    }, 500); // Durasi sesuai dengan animasi fade-out
   }
 }

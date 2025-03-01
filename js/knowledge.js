@@ -23,7 +23,7 @@ const intents = [
     pattern: /(jadwal penyebrangan|waktu keberangkatan|jadwal keberangkatan)/i,
     keywords: ["jadwal","penyebrangan","keberangkatan"],
     responses: [
-  "Berikut adalah jadwal penyeberangan:\nMuara → Tanah Merah: 08:00, 10:00, 13:00, 15:00, 17:00.\nTanah Merah → Muara: 09:00, 11:00, 14:00, 16:00, 17:30."
+  "<div style='white-space: pre-wrap;'>Berikut adalah jadwal penyebrangan:\n\nMuara → Tanah Merah:\n08:00, 10:00, 13:00, 15:00, 17:00\n\nTanah Merah → Muara:\n09:00, 11:00, 14:00, 16:00, 17:30\n</div>"
 ]
   },
   {
@@ -98,6 +98,14 @@ const intents = [
     keywords: ["jsdjsids"],
     responses: [
   "Mulai dari jam 9"
+]
+  },
+  {
+    intent: "penutupan",
+    pattern: /ok/i,
+    keywords: ["penutupan"],
+    responses: [
+  "Baik, kalau ada yang ditanyakan lagi, hubungi saya"
 ]
   },
 ];

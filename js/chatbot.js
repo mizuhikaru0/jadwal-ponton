@@ -75,7 +75,7 @@ class Chatbot {
     return message.split(" ").filter((word) => word.length > 3 && !this.stopWords.includes(word));
   }
 
-  // === Fungsi Pembantu: Parsing Regex dari string ---
+  // === Fungsi Pembantu: Parsing Regex dari string --- 
   _parseRegex(regexString) {
     if (regexString.startsWith("/") && regexString.lastIndexOf("/") > 0) {
       const lastSlash = regexString.lastIndexOf("/");
@@ -86,7 +86,7 @@ class Chatbot {
     return new RegExp(regexString, "i");
   }
 
-  // === Fungsi untuk Menghasilkan Pattern Otomatis dari Teks Pertanyaan ---
+  // === Fungsi untuk Menghasilkan Pattern Otomatis dari Teks Pertanyaan --- 
   generatePatternFromText(text) {
     const words = text.split(/\s+/).filter(word => word.length > 0);
     const patternStr = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(".*");
@@ -94,7 +94,6 @@ class Chatbot {
   }
 
   // === Pembelajaran Umpan Balik dengan Generator & Download (Diperbarui) ===
-  // Parameter: (feedback, targetIntent, targetQuestion, targetPattern, targetResponses)
   learnFromFeedback(feedback, targetIntent, targetQuestion, targetPattern, targetResponses) {
     let intentObj = null;
     if (targetIntent) {
@@ -136,7 +135,7 @@ class Chatbot {
     return "Baik, informasi telah diterima, dan akan ditambahkan.";
   }
 
-  // === Fungsi Generator untuk Menghasilkan Kode knowledge.js ---
+  // === Fungsi Generator untuk Menghasilkan Kode knowledge.js --- 
   generateKnowledgeCode() {
     let code = "const intents = [\n";
     this.intents.forEach((intent) => {
@@ -166,7 +165,7 @@ class Chatbot {
     URL.revokeObjectURL(url);
   }
 
-  // === Pemrosesan Intent dengan Keyword Matching ---
+  // === Pemrosesan Intent dengan Keyword Matching --- 
   processIntents(message) {
     for (const intent of this.intents) {
       if (intent.pattern.test(message)) {
@@ -187,16 +186,16 @@ class Chatbot {
     return null;
   }
 
-  // === Penanganan Jadwal Spesifik dengan Peningkatan ---
+  // === Penanganan Jadwal Spesifik dengan Peningkatan --- 
   handleSpecificSchedule() {
     return null;
   }
 
-  // === Main Response Handler ---
+  // === Main Response Handler --- 
   getResponse(rawMessage) {
     const message = rawMessage.trim();
 
-    // --- Mode Koneksi ke Petugas (jika tidak ada kecocokan di knowledge) ---
+    // --- Mode Koneksi ke Petugas ---
     if (this.connectionModeActive) {
       if (this.connectionStage === "awaiting_confirmation") {
         if (message.toLowerCase() === "ya") {
@@ -254,7 +253,6 @@ class Chatbot {
       }
     }
 
-    // --- Aktifkan Mode Pelatihan Interaktif ---
     if (message.toLowerCase() === "belajar 44726") {
       this.learningModeActive = true;
       this.learningStage = "awaiting_intent";
@@ -262,7 +260,6 @@ class Chatbot {
       return this.formatResponse("Baik, silahkan masukkan intent.");
     }
 
-    // --- Proses Pesan Biasa ---
     if (message.toLowerCase() === "p") {
       return this.formatResponse("Iya ada apa?");
     }
@@ -287,7 +284,7 @@ class Chatbot {
     if (complexResponse) return this.formatResponse(complexResponse);
 
     // --- Jika tidak ada kecocokan di database knowledge ---
-    this.lastUserQuestion = message; // Simpan pesan asli pengguna
+    this.lastUserQuestion = message;
     this.connectionModeActive = true;
     this.connectionStage = "awaiting_confirmation";
     return this.formatResponse("Maaf, saya masih dalam tahap belajar.\nApakah Anda mau dihubungkan ke petugas terkait? (Ya/Tidak)");
