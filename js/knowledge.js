@@ -84,6 +84,22 @@ const intents = [
   "Enggak kok"
 ]
   },
+  {
+    intent: "ponton-pagi",
+    pattern: /ponton.*pagi.*mulai.*jam.*berapa.*ya/i,
+    keywords: ["ponton-pagi"],
+    responses: [
+  "Ini dari arah mana? Dari luar mau masuk wm atau dari dalam?"
+]
+  },
+  {
+    intent: "jsdjsids",
+    pattern: /jadwal.*dari.*luar.*masuk.*ke.*wm.*paling.*pagi/i,
+    keywords: ["jsdjsids"],
+    responses: [
+  "Mulai dari jam 9"
+]
+  },
 ];
 
 export default intents;
