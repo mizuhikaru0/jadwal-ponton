@@ -4,7 +4,7 @@ export const tariffData = [
     { description: "Orangnya saja", price: "5000" },
     { description: "Motor sendiri tanpa boncengan", price: "40000" },
     { description: "Motor dengan boncengan", price: "45000" },
-    { description: "Tuslah kenaikan selama hari raya Idul Fitri dan Idul Adha", price: "" }
+    { description: "Tuslah kenaikan selama hari raya Idul Fitri dan Idul Adha", price: "Tidak ada" },
   ];
   
   export function renderTariffInfo() {

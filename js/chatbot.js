@@ -1,275 +1,306 @@
-import knowledge from "./knowledge.js";
+// js/chatbot.js
+
+import { intents, fallbackResponses } from "./knowledge.js";
+import { tariffData } from "./tarif.js";
+import { routeInfo } from "./rute.js";
+import { scheduleData, adjustTimeIfFriday, getNextDeparture, formatRouteName } from "./schedule.js";
+
+
+const contacts = [
+    { name: "Riko (Nahkoda)", number: "6282252869605", display: "0822 5286 9605" },
+    { name: "Ihsan Maulana (ABK)", number: "6282211061254", display: "0822 1106 1254" }
+];
 
 class Chatbot {
-  constructor() {
-    this.intents = knowledge;
-    this.context = {};
-    this.learningData = {}; 
-    this.pendingFeedback = {};
-    this.stopWords = ["yang", "untuk", "dan", "di", "ke", "dari", "ini", "itu", "pada", "saja", "ada", "dengan", "sebagai", "atau"];
-
-    this.learningModeActive = false;
-    this.learningStage = null;
-    this.learningInfo = {}; // { intent, question, response }
-
-    this.connectionModeActive = false;
-    this.connectionStage = null;
-
-    this.lastUserQuestion = "";
-  }
-
-  formatResponse(response) {
-    if (typeof response !== "string") return response;
-    let formatted = response.replace(/\n/g, "<br>");
-    formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    formatted = formatted.replace(/_(.*?)_/g, "<em>$1</em>");
-    formatted = formatted.replace(/__(.*?)__/g, "<u>$1</u>");
-    formatted = formatted.replace(/~~(.*?)~~/g, "<del>$1</del>");
-    return formatted;
-  }
-  
-  updateContext(intent, message, extra = {}) {
-    this.context = {
-      ...this.context,
-      lastIntent: intent,
-      lastMessage: message,
-      ...extra
-    };
-  }
-
-  resetContext() {
-    this.context = {};
-  }
-
-  isFollowUp(message) {
-    const followUpIndicators = ["itu", "tersebut", "yang tadi", "lanjut", "selanjutnya"];
-    return followUpIndicators.some((indicator) => message.includes(indicator));
-  }
-
-  handleFollowUp() {
-    switch (this.context.lastIntent) {
-      case "jadwal_umum":
-      case "jadwal_spesifik":
-        return "Apakah Anda membutuhkan jadwal untuk rute lain atau informasi lebih lanjut tentang jadwal tersebut?";
-      default:
-        return null;
-    }
-  }
-
-  analyzeComplexMessage(message) {
-    return null;
-  }
-
-  extractKeywords(message) {
-    return message.split(" ").filter((word) => word.length > 3 && !this.stopWords.includes(word));
-  }
-
-  _parseRegex(regexString) {
-    if (regexString.startsWith("/") && regexString.lastIndexOf("/") > 0) {
-      const lastSlash = regexString.lastIndexOf("/");
-      const pattern = regexString.substring(1, lastSlash);
-      const flags = regexString.substring(lastSlash + 1);
-      return new RegExp(pattern, flags);
-    }
-    return new RegExp(regexString, "i");
-  }
-
-  generatePatternFromText(text) {
-    const words = text.split(/\s+/).filter(word => word.length > 0);
-    const patternStr = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(".*");
-    return new RegExp(patternStr, "i");
-  }
-
-  learnFromFeedback(feedback, targetIntent, targetQuestion, targetPattern, targetResponses) {
-    let intentObj = null;
-    if (targetIntent) {
-      intentObj = this.intents.find((i) => i.intent === targetIntent);
-      if (!intentObj) {
-        // Buat intent baru dengan properti default
-        intentObj = {
-          intent: targetIntent,
-          pattern: targetPattern ? this._parseRegex(targetPattern)
-                   : (targetQuestion ? this.generatePatternFromText(targetQuestion) : new RegExp(targetIntent, "i")),
-          keywords: targetIntent.split("_"),
-          responses: targetResponses ? targetResponses : []
+    constructor() {
+        this.intents = intents;
+        this.fallbackResponses = fallbackResponses;
+        this.routeAliases = {
+            "tanahmerah": "Tanah Merah",
+            "tanah-merah": "Tanah Merah",
+            "tanah merah": "Tanah Merah",
+            "merah": "Tanah Merah",
+            "muara": "Muara",
+            "wm": "Muara"
         };
-        this.intents.push(intentObj);
-      } else {
-        // Jika intent sudah ada, update pattern jika diberikan atau gunakan pertanyaan untuk membuat pattern otomatis
-        if (targetPattern) {
-          intentObj.pattern = this._parseRegex(targetPattern);
-        } else if (targetQuestion) {
-          intentObj.pattern = this.generatePatternFromText(targetQuestion);
-        }
-        if (targetResponses) {
-          intentObj.responses = intentObj.responses.concat(targetResponses);
-        } else if (feedback) {
-          intentObj.responses.push(feedback);
-        }
-      }
-    } else if (this.context.lastIntent) {
-      intentObj = this.intents.find((i) => i.intent === this.context.lastIntent);
-      if (intentObj) {
-        intentObj.responses.push(feedback);
-      }
-    } else {
-      this.pendingFeedback[this.context.lastMessage] = feedback;
-      return "Feedback disimpan dalam pending karena konteks tidak jelas.";
     }
-    this.downloadKnowledgeFile();
-    this.resetContext();
-    return "Baik, informasi telah diterima, dan akan ditambahkan.";
-  }
 
-  generateKnowledgeCode() {
-    let code = "const intents = [\n";
-    this.intents.forEach((intent) => {
-      code += "  {\n";
-      code += `    intent: "${intent.intent}",\n`;
-      code += `    pattern: ${intent.pattern.toString()},\n`;
-      if (intent.keywords) {
-        code += `    keywords: ${JSON.stringify(intent.keywords)},\n`;
-      }
-      code += `    responses: ${JSON.stringify(intent.responses, null, 2)}\n`;
-      code += "  },\n";
-    });
-    code += "];\n\nexport default intents;\n";
-    return code;
-  }
-
-  downloadKnowledgeFile() {
-    const code = this.generateKnowledgeCode();
-    const blob = new Blob([code], { type: "text/javascript" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "knowledge.js";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  processIntents(message) {
-    for (const intent of this.intents) {
-      if (intent.pattern.test(message)) {
-        this.updateContext(intent.intent, message);
-        if (intent.intent === "perpisahan") this.resetContext();
-        const randomIndex = Math.floor(Math.random() * intent.responses.length);
-        return intent.responses[randomIndex];
-      }
+    /**
+     * Normalisasi Teks: Hapus tanda baca, lowercase, trim
+     */
+    cleanText(text) {
+        return text.toLowerCase().replace(/[?!.,;:]/g, "").trim();
     }
-    const messageKeywords = this.extractKeywords(message);
-    for (const intent of this.intents) {
-      if (intent.keywords && intent.keywords.some(keyword => messageKeywords.includes(keyword))) {
-        this.updateContext(intent.intent, message);
-        const randomIndex = Math.floor(Math.random() * intent.responses.length);
-        return intent.responses[randomIndex];
-      }
-    }
-    return null;
-  }
 
-  handleSpecificSchedule() {
-    return null;
-  }
-
-  // === Main Response Handler --- 
-  getResponse(rawMessage) {
-    const message = rawMessage.trim();
-
-    if (this.connectionModeActive) {
-      if (this.connectionStage === "awaiting_confirmation") {
-        if (message.toLowerCase() === "ya") {
-          this.connectionStage = "awaiting_petugas_choice";
-          return this.formatResponse("Silakan pilih petugas:\n1. **Riko (Nahkoda Ponton)**\n2. **Ihsan Maulana (ABK Ponton)**");
-        } else if (message.toLowerCase() === "tidak") {
-          this.connectionModeActive = false;
-          this.connectionStage = null;
-          return this.formatResponse("Baik, sesi ditutup.");
-        } else {
-          return this.formatResponse("Mohon jawab dengan **Ya** atau **Tidak**.");
-        }
-      } else if (this.connectionStage === "awaiting_petugas_choice") {
+    /**
+     * Sistem Skor Sederhana untuk menentukan Intent
+     */
+    analyzeIntent(message) {
+        const cleanedMessage = this.cleanText(message);
+        const words = cleanedMessage.split(/\s+/);
         
-        const prefill = encodeURIComponent(this.lastUserQuestion);
-        if (message === "1") {
-          window.location.href = "https://wa.me/6282252869605?text=" + prefill;
-          this.connectionModeActive = false;
-          this.connectionStage = null;
-          return this.formatResponse("Mengalihkan ke WhatsApp **Riko (Nahkoda Ponton)**...");
-        } else if (message === "2") {
-          window.location.href = "https://wa.me/6282211061254?text=" + prefill;
-          this.connectionModeActive = false;
-          this.connectionStage = null;
-          return this.formatResponse("Mengalihkan ke WhatsApp **Ihsan Maulana (ABK Ponton)**...");
-        } else {
-          return this.formatResponse("Mohon pilih **1** atau **2**.");
+        let bestIntent = null;
+        let maxScore = 0;
+
+        this.intents.forEach(intent => {
+            let score = 0;
+            intent.keywords.forEach(keyword => {
+                // Skor +2 jika kata persis sama
+                if (words.includes(keyword)) score += 2;
+                // Skor +1 jika mengandung kata (partial match)
+                else if (cleanedMessage.includes(keyword)) score += 1;
+            });
+
+            if (score > maxScore) {
+                maxScore = score;
+                bestIntent = intent;
+            }
+        });
+
+        // Ambang batas skor (threshold) agar tidak asal jawab
+        return maxScore >= 1 ? bestIntent : null;
+    }
+
+    /**
+     * Generator Respon Dinamis
+     */
+    getResponse(rawMessage) {
+        const message = rawMessage || "";
+        if (!message.trim()) return "Silakan ketik sesuatu...";
+
+        const intent = this.analyzeIntent(message);
+
+        // 1. Jika Intent tidak ditemukan
+        if (!intent) {
+            return this.getRandom(this.fallbackResponses);
         }
-      }
+
+        // 2. Handler Khusus berdasarkan ID Intent
+        switch (intent.id) {
+            case "tarif":
+                return this.generateTariffResponse(message);
+            case "jadwal":
+                return this.generateScheduleResponse(message);
+            case "rute":
+                return this.generateRouteResponse(message);
+            case "wait_request": 
+                return this.generateWaitRequestResponse(message);
+            case "kontak":
+                return this.generateContactResponse();
+            case "sapaan":
+            case "identitas":
+            case "terimakasih":
+            case "perpisahan":
+                return this.getRandom(intent.responses);
+            default:
+                return this.getRandom(this.fallbackResponses);
+        }
     }
 
-    if (this.learningModeActive) {
-      if (this.learningStage === "awaiting_intent") {
-        this.learningInfo.intent = message;
-        this.learningStage = "awaiting_question";
-        return this.formatResponse("Oke, intent diterima, kemudian masukkan pertanyaan.");
-      } else if (this.learningStage === "awaiting_question") {
-        this.learningInfo.question = message;
-        this.learningStage = "awaiting_response";
-        return this.formatResponse("Oke, masukkan respon.");
-      } else if (this.learningStage === "awaiting_response") {
-        this.learningInfo.response = message;
-        const result = this.learnFromFeedback(
-          "", 
-          this.learningInfo.intent, 
-          this.learningInfo.question, 
-          null, 
-          [this.learningInfo.response]
-        );
-        this.learningModeActive = false;
-        this.learningStage = null;
-        this.learningInfo = {};
-        return this.formatResponse(result);
-      }
+    // --- LOGIKA SPESIFIK ---
+
+    /**
+     * Menjawab pertanyaan kontak
+     */
+    generateContactResponse() {
+        let response = "📞 **Kontak Petugas Ponton:**\n";
+        contacts.forEach((c, index) => {
+            response += `${index + 1}. **${c.name}**: ${c.display}\n`;
+        });
+        response += "\nSilakan hubungi salah satu jika ada keperluan mendesak.";
+        return response;
+    }
+    
+    /**
+     * Menjawab pertanyaan tarif dengan data dari tarif.js
+     */
+    generateTariffResponse(message) {
+        const lowerMsg = this.cleanText(message);
+        let response = "📋 **Info Tarif Penyebrangan:**\n";
+        
+        let specificFound = false;
+        
+        if (lowerMsg.includes("motor")) {
+            const motorRates = tariffData.filter(t => t.description.toLowerCase().includes("motor"));
+            if (motorRates.length > 0) {
+                response = "🏍️ **Tarif Motor:**\n";
+                motorRates.forEach(item => {
+                    response += `- ${item.description}: **Rp ${item.price}**\n`;
+                });
+                specificFound = true;
+            }
+        } 
+        
+        if (lowerMsg.includes("orang") || lowerMsg.includes("sendiri")) {
+            const personRate = tariffData.find(t => t.description.toLowerCase().includes("orang"));
+            if (personRate) {
+                response += `🚶 ${personRate.description}: **Rp ${personRate.price}**\n`;
+                specificFound = true;
+            }
+        }
+
+        if (!specificFound) {
+            tariffData.forEach(item => {
+                if (item.price) {
+                    response += `- ${item.description}: **Rp ${item.price}**\n`;
+                } else {
+                    response += `ℹ️ _${item.description}_\n`;
+                }
+            });
+        }
+
+        return response;
     }
 
-    if (message.toLowerCase() === "belajar 44726") {
-      this.learningModeActive = true;
-      this.learningStage = "awaiting_intent";
-      this.learningInfo = {};
-      return this.formatResponse("Baik, silahkan masukkan intent.");
+    /**
+     * Menjawab pertanyaan rute dengan data dari rute.js
+     */
+    generateRouteResponse(message) {
+        let response = "🗺️ **Info Rute:**\n\n";
+        routeInfo.routes.forEach(r => {
+            response += `📍 **${r.name}**\n`;
+            response += `   _${r.details[0]}_\n\n`; 
+        });
+        return response;
     }
 
-    if (message.toLowerCase() === "p") {
-      return this.formatResponse("Iya ada apa?");
+    /**
+     * Menjawab pertanyaan jadwal dengan data dari schedule.js
+     */
+    generateScheduleResponse(message) {
+        const cleanMsg = this.cleanText(message);
+        
+        let selectedRouteKey = null;
+        let selectedRouteLabel = "";
+
+        for (const [alias, label] of Object.entries(this.routeAliases)) {
+            if (cleanMsg.includes(alias)) {
+                const realKey = Object.keys(scheduleData).find(k => 
+                    k.toLowerCase().includes(label.toLowerCase().replace(/\s/g, '')) || 
+                    this.routeAliases[k.split('-')[0].toLowerCase()] === label
+                );
+                
+                if (realKey) {
+                    selectedRouteKey = realKey;
+                    selectedRouteLabel = label;
+                    break;
+                }
+            }
+        }
+
+        const timeMatch = cleanMsg.match(/(\d{1,2})([.:]\d{2})?/);
+        if (timeMatch) {
+            const hourQuery = parseInt(timeMatch[1]);
+            let foundTimes = [];
+            
+            Object.keys(scheduleData).forEach(route => {
+                scheduleData[route].forEach(time => {
+                    const adjusted = adjustTimeIfFriday(time);
+                    const hourSchedule = parseInt(adjusted.split(':')[0]);
+                    if (hourSchedule === hourQuery) {
+                        foundTimes.push(`- ${adjusted} WIB (Rute ${formatRouteName(route)})`);
+                    }
+                });
+            });
+
+            if (foundTimes.length > 0) {
+                return `✅ Ya, ada keberangkatan sekitar jam ${hourQuery}:\n${foundTimes.join("\n")}\n_Cek **Jadwal** di menu utama untuk rincian._`;
+            } else {
+                return `❌ Tidak ada keberangkatan tepat di jam ${hourQuery} (atau sudah lewat). Silakan cek *Keberangkatan Berikutnya* atau *Jadwal Lengkap*.`;
+            }
+        }
+        
+        if (cleanMsg.includes("selanjutnya") || cleanMsg.includes("berikutnya") || cleanMsg.includes("sekarang")) {
+            const { nextTime, nextRoute } = getNextDeparture();
+            if (nextTime) {
+                const nextTimeStr = nextTime.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit', hour12: false });
+                const routeName = formatRouteName(nextRoute);
+                return `🚤 **Keberangkatan Berikutnya:**\nUntuk rute **${routeName}** pada pukul **${nextTimeStr} WIB**.`;
+            }
+        }
+
+        if (selectedRouteKey) {
+            const times = scheduleData[selectedRouteKey].map(t => adjustTimeIfFriday(t)).join(", ");
+            return `🕒 **Jadwal ${formatRouteName(selectedRouteKey)}:**\n${times} WIB\n\n_Catatan: Jumat jam 13:00 WIB mundur ke 13:30 WIB._`;
+        } else {
+            let response = "🕒 **Jadwal Keberangkatan Lengkap:**\n";
+            Object.keys(scheduleData).forEach(key => {
+                const routeName = formatRouteName(key);
+                const times = scheduleData[key].map(t => adjustTimeIfFriday(t)).join(", ");
+                response += `\n⚓ **${routeName}**\n   ${times} WIB`;
+            });
+            response += "\n\n_Catatan: Jumat jam 13:00 WIB mundur ke 13:30 WIB._";
+            return response;
+        }
     }
 
-    if (this.learningData[message]) {
-      return this.formatResponse(this.learningData[message]);
+    /**
+     * Menjawab pertanyaan minta tunggu (wait request)
+     */
+    generateWaitRequestResponse(message) {
+        const cleanMsg = this.cleanText(message);
+        const defaultWaitMessage = "Pak, minta tunggu ya?";
+        const waMessage = encodeURIComponent(defaultWaitMessage);
+        
+        // --- Multi-Turn Logic ---
+
+        // 1. User memilih kontak (1 atau 2) -> Trigger AUTOWA
+        if (cleanMsg.includes("1") || cleanMsg.includes("satu") || cleanMsg.includes("pilih 1")) {
+            const contact = contacts[0];
+            const waUrl = `https://wa.me/${contact.number}?text=${waMessage}`;
+            // MENGGUNAKAN MARKER KHUSUS: [AUTOWA]
+            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n${waUrl}\n[AUTOWA:${waUrl}]`;
+        }
+        
+        if (cleanMsg.includes("2") || cleanMsg.includes("dua") || cleanMsg.includes("pilih 2")) {
+            const contact = contacts[1];
+            const waUrl = `https://wa.me/${contact.number}?text=${waMessage}`;
+            // MENGGUNAKAN MARKER KHUSUS: [AUTOWA]
+            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n${waUrl}\n[AUTOWA:${waUrl}]`;
+        }
+        
+        // 2. User konfirmasi 'MAU' / 'LANJUT' 
+        if (cleanMsg.includes("mau") || cleanMsg.includes("lanjut") || cleanMsg.includes("ya") || cleanMsg.includes("setuju")) {
+            let response = "Baik, silakan pilih salah satu petugas yang ingin Anda hubungi untuk konfirmasi tunggu 5 menit:\n\n";
+            response += `1. **${contacts[0].name}** (${contacts[0].display})\n`;
+            response += `2. **${contacts[1].name}** (${contacts[1].display})\n\n`;
+            response += "Ketik **1** atau **2** untuk memilih.";
+            return response;
+        }
+
+        // 3. User mengatakan 'TIDAK' / 'KEBERATAN' (Prompt untuk cek urgen)
+        if (cleanMsg.includes("tidak") || cleanMsg.includes("keberatan") || cleanMsg.includes("enggak") || cleanMsg.includes("tdk") || cleanMsg.includes("nggak")) {
+            return `Baik. Apakah kondisi Anda **sangat urgen** (misalnya ada keluarga meninggal/sakit parah) yang membuat Anda butuh ditunggu lebih lama dari 5 menit?
+            
+            Ketik **'URGENT'** jika ya, atau **'TIDAK URGEN'** jika tidak.`;
+        }
+        
+        // 4. User konfirmasi 'URGENT' 
+        if (cleanMsg.includes("urgent") || cleanMsg.includes("sangat urgen") || cleanMsg.includes("penting")) {
+            let response = "Baik, karena kondisi urgen, kami akan meminta petugas memberikan toleransi waktu lebih panjang. Segera hubungi salah satu petugas di bawah ini:\n\n";
+            response += `1. **${contacts[0].name}** (${contacts[0].display})\n`;
+            response += `2. **${contacts[1].name}** (${contacts[1].display})\n\n`;
+            response += "Ketik **1** atau **2** untuk memilih.";
+            return response;
+        }
+        
+        // 5. User konfirmasi 'TIDAK URGEN'
+        if (cleanMsg.includes("tidak urgen") || cleanMsg.includes("tdk urgent")) {
+            return "Terima kasih atas kejujuran Anda. Mohon dipercepat atau bersiap menunggu jadwal penyebrangan berikutnya jika sudah terlewat, demi ketertiban bersama.";
+        }
+
+        // 6. Respon 'wait_request' Awal (Default)
+        let response = "🙏 **Permintaan Tunggu (Wait Request):**\n\n";
+        response += "Kami dapat memintakan penyebrangan untuk menunggu Anda, namun **maksimal hanya 5 menit** saja. Ini untuk menjaga agar jadwal yang lain tidak ikut terganggu.\n\n";
+        response += "Apakah Anda **MAU** kami teruskan permintaan tunggu 5 menit ini ke petugas?\n\n";
+        response += "Ketik **'MAU'** untuk melanjutkan, atau **'TIDAK'** jika Anda keberatan dengan batas 5 menit.";
+        return response;
     }
 
-    if (this.context.lastIntent && this.isFollowUp(message.toLowerCase())) {
-      const followUpResponse = this.handleFollowUp();
-      if (followUpResponse) return this.formatResponse(followUpResponse);
+    // Utility Helper
+    getRandom(array) {
+        return array[Math.floor(Math.random() * array.length)];
     }
-
-    const intentResponse = this.processIntents(message.toLowerCase());
-    if (intentResponse) {
-      const specificScheduleResponse = this.handleSpecificSchedule(message.toLowerCase());
-      if (specificScheduleResponse) return this.formatResponse(specificScheduleResponse);
-      return this.formatResponse(intentResponse);
-    }
-
-    const complexResponse = this.analyzeComplexMessage(message.toLowerCase());
-    if (complexResponse) return this.formatResponse(complexResponse);
-
-    // --- Jika tidak ada kecocokan di database knowledge ---
-    this.lastUserQuestion = message;
-    this.connectionModeActive = true;
-    this.connectionStage = "awaiting_confirmation";
-    return this.formatResponse("Maaf, saya masih dalam tahap belajar.\nApakah Anda mau dihubungkan ke petugas terkait? (Ya/Tidak)");
-  }
 }
 
 export default Chatbot;

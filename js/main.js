@@ -1,3 +1,5 @@
+// js/main.js
+
 import { updateTheme, toggleTheme } from "./theme.js";
 import { renderSchedules, startCountdown } from "./schedule.js";
 import { renderSavedRequests, handleWaitRequest } from "./waitRequest.js";
@@ -24,6 +26,16 @@ function initializeApp() {
 
 initializeApp();
 
+function parseMarkdown(text) {
+  if (!text) return "";
+  let formattedText = text
+    .replace(/\[AUTOWA:.*?\]/g, '') 
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/_(.*?)_/g, '<em>$1</em>');
+  return formattedText.replace(/\n/g, '<br>');
+}
+// ----------------------------------------------------------
+
 function initializeChatbot() {
   const chatbot = new Chatbot();
   const chatForm = document.getElementById("chatForm");
@@ -33,24 +45,14 @@ function initializeChatbot() {
 
   if (chatbotModal && chatOutput) {
     chatbotModal.addEventListener("show.bs.modal", () => {
-      chatOutput.innerHTML = "";
-      const loaderElem = document.createElement("div");
-      loaderElem.id = "chatLoader";
-      loaderElem.innerHTML = `
-        <div class="loader-spinner">
-          <div class="spinner-circle"></div>
-        </div>
-        <p style="text-align:center; color:#fff; margin-top:10px;">Memuat Chatbot...</p>
-      `;
-      chatOutput.appendChild(loaderElem);
+      // Bersihkan chat saat dibuka (opsional)
+      if (chatOutput.childElementCount === 0) {
+         chatOutput.innerHTML = "";
+      }
     });
 
     chatbotModal.addEventListener("shown.bs.modal", () => {
-      setTimeout(() => {
-        const loaderElem = document.getElementById("chatLoader");
-        if (loaderElem) removeLoaderWithTransition(loaderElem);
-        loadChatHistory();
-      }, 1000);
+       loadChatHistory();
     });
   }
 
@@ -59,6 +61,8 @@ function initializeChatbot() {
     resetChatBtn.addEventListener("click", () => {
       localStorage.removeItem("chatSession");
       chatOutput.innerHTML = "";
+      const greeting = "Halo! Ada yang bisa saya bantu mengenai jadwal, tarif, atau rute?";
+      appendMessageWithTypingEffect("bot", greeting);
     });
   }
 
@@ -67,73 +71,102 @@ function initializeChatbot() {
       event.preventDefault();
       const userMessage = chatInput.value.trim();
       if (!userMessage) return;
-      appendMessageToChatOutput("user", userMessage);
+
+      appendMessageToChatOutput("user", parseMarkdown(userMessage));
       addMessageToSession("user", userMessage);
+      
       chatInput.value = "";
-      chatOutput.scrollTop = chatOutput.scrollHeight;
+      scrollToBottom();
+
       const botLoaderElem = document.createElement("div");
       botLoaderElem.classList.add("chat-message", "bot-message");
       botLoaderElem.innerHTML = `
-        <div class="loader-spinner">
+        <div class="loader-spinner" style="margin:0; width:20px; height:20px; border-width:3px;">
           <div class="spinner-circle"></div>
         </div>
-        <p style="text-align:left; color:#ffd700; margin-top:5px;">Loading...</p>
+        <span style="margin-left:10px; font-style:italic;">Mengetik...</span>
       `;
       chatOutput.appendChild(botLoaderElem);
-      chatOutput.scrollTop = chatOutput.scrollHeight;
+      scrollToBottom();
+
+      // Proses Respon Bot
       setTimeout(() => {
         botLoaderElem.remove();
-        const botResponse = chatbot.getResponse(userMessage);
-        appendMessageWithTypingEffect("bot", botResponse, () => {
-          if (botResponse.includes("Baik, sesi ditutup")) {
+        
+        const rawResponse = chatbot.getResponse(userMessage);
+        const formattedResponse = parseMarkdown(rawResponse);
+
+        appendMessageWithTypingEffect("bot", formattedResponse, () => {
+          const autoWaMatch = rawResponse.match(/\[AUTOWA:(.*?)\]/);
+          if (autoWaMatch && autoWaMatch[1]) {
+            const waUrl = autoWaMatch[1];
+            setTimeout(() => {
+                window.open(waUrl, "_blank");
+            }, 500); // Delay 500ms agar user sempat melihat pesan
+          }
+          // ---------------------------------
+
+          if (rawResponse.includes("Sesi ditutup") || rawResponse.includes("Sampai jumpa")) {
             setTimeout(() => {
               let modalInstance = bootstrap.Modal.getInstance(chatbotModal);
               if (!modalInstance) {
                 modalInstance = new bootstrap.Modal(chatbotModal);
               }
               modalInstance.hide();
-            }, 500);
+            }, 1500);
           }
         });
-        addMessageToSession("bot", botResponse);
-      }, 1500);
+        
+        const historyText = rawResponse.replace(/\[AUTOWA:.*?\]/g, "").trim(); 
+        addMessageToSession("bot", historyText);
+      }, 800);
     });
   } else {
     console.log("Elemen Chatbot tidak ditemukan.");
   }
 
-  function appendMessageToChatOutput(type, text) {
-    const messageElem = document.createElement("div");
-    messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    messageElem.innerHTML = text.replace(/\n/g, "<br>");
-    chatOutput.appendChild(messageElem);
+  function scrollToBottom() {
+    chatOutput.scrollTop = chatOutput.scrollHeight;
   }
 
-  function appendMessageWithTypingEffect(type, formattedText, callback) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = formattedText;
-    let plainText = tempDiv.innerText;
-    plainText = plainText.replace(/\.([^ \n])/g, ". $1");
+  // Menampilkan pesan langsung (tanpa ketikan)
+  function appendMessageToChatOutput(type, htmlText) {
     const messageElem = document.createElement("div");
     messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
-    messageElem.style.whiteSpace = "pre-wrap";
+    messageElem.innerHTML = htmlText;
     chatOutput.appendChild(messageElem);
-    typeMessage(messageElem, plainText, 50, () => {
-      messageElem.innerHTML = formattedText;
-      messageElem.style.whiteSpace = "pre-wrap";
-      chatOutput.scrollTop = chatOutput.scrollHeight;
+    scrollToBottom();
+  }
+
+  // Menampilkan pesan dengan efek mengetik
+  function appendMessageWithTypingEffect(type, formattedHtml, callback) {
+    // Buat elemen dummy untuk mengambil teks polosnya (tanpa tag HTML)
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = formattedHtml;
+    let plainText = tempDiv.innerText || tempDiv.textContent; // Ambil teks murninya saja
+
+    const messageElem = document.createElement("div");
+    messageElem.classList.add("chat-message", type === "user" ? "user-message" : "bot-message");
+    chatOutput.appendChild(messageElem);
+
+    // Ketik teks polosnya dulu
+    typeMessage(messageElem, plainText, 20, () => {
+      // Setelah selesai mengetik, ganti dengan HTML yang sudah diformat (Tebal/Miring muncul)
+      messageElem.innerHTML = formattedHtml; 
+      scrollToBottom();
       if (callback && typeof callback === "function") {
         callback();
       }
     });
   }
 
-  function typeMessage(element, text, delay = 50, callback) {
+  function typeMessage(element, text, delay = 20, callback) {
     let i = 0;
     element.textContent = "";
     const interval = setInterval(() => {
       element.textContent += text.charAt(i);
       i++;
+      chatOutput.scrollTop = chatOutput.scrollHeight; // Auto scroll saat ngetik
       if (i >= text.length) {
         clearInterval(interval);
         if (callback) callback();
@@ -144,9 +177,16 @@ function initializeChatbot() {
   function loadChatHistory() {
     chatOutput.innerHTML = "";
     const session = loadChatSession();
-    session.forEach(message => {
-      appendMessageToChatOutput(message.type, message.text);
-    });
+    if (session.length === 0) {
+        // Sapaan awal jika history kosong
+        const greeting = "Halo! Saya asisten virtual Ponton. Ada yang bisa dibantu mengenai jadwal atau tarif?";
+        appendMessageWithTypingEffect("bot", greeting);
+    } else {
+        session.forEach(message => {
+            // Render history dengan format HTML juga
+            appendMessageToChatOutput(message.type, parseMarkdown(message.text));
+        });
+    }
   }
 
   function loadChatSession() {
@@ -154,6 +194,7 @@ function initializeChatbot() {
     if (sessionData) {
       const session = JSON.parse(sessionData);
       const now = Date.now();
+      // Reset history jika lebih dari 24 jam
       if (now - session.timestamp > 86400000) {
         localStorage.removeItem("chatSession");
         return [];
@@ -173,12 +214,5 @@ function initializeChatbot() {
     }
     session.messages.push({ type, text });
     localStorage.setItem("chatSession", JSON.stringify(session));
-  }
-
-  function removeLoaderWithTransition(loaderElem) {
-    loaderElem.style.opacity = 0;
-    setTimeout(() => {
-      loaderElem.remove();
-    }, 500);
   }
 }

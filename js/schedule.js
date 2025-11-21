@@ -1,30 +1,39 @@
-// js/schedule.js
 
-// Konstanta untuk konfigurasi
-const ALARM_FREQUENCY = 1200; // Frekuensi alarm (Hz)
-const ALARM_DURATION = 5;     // Durasi alarm (detik)
-const COUNTDOWN_INTERVAL = 1000; // Interval update countdown (ms)
+const ALARM_FREQUENCY = 1200;
+const ALARM_DURATION = 5;
+const COUNTDOWN_INTERVAL = 1000;
 
-// Data jadwal
+
 export const scheduleData = {
   "muara-tanahmerah": ["08:00", "10:00", "13:00", "15:00", "17:00"],
   "tanahmerah-muara": ["09:00", "11:00", "14:00", "16:00", "17:30"]
 };
 
-// Fungsi untuk menyesuaikan waktu jika hari Jumat
 export const adjustTimeIfFriday = (timeStr) => {
   const now = new Date();
-  // Jika hari Jumat dan waktu 13:00, ubah menjadi 13:30
   return (now.getDay() === 5 && timeStr === "13:00") ? "13:30" : timeStr;
 };
 
-// Render semua jadwal
+export const formatRouteName = (routeKey) => {
+  if (!routeKey || typeof routeKey !== "string") return routeKey;
+  return routeKey
+    .split("-")
+    .map(part => {
+      const lower = part.toLowerCase().trim();
+      if (lower === "tanahmerah") return "Tanah Merah";
+      if (lower === "tanah") return "Tanah";
+      if (lower === "merah") return "Merah";
+      if (lower === "muara") return "Muara";
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(" – ");
+};
+
 export const renderSchedules = () => {
   renderSchedule("muara-tanahmerah", "muaraSchedule", scheduleData["muara-tanahmerah"]);
   renderSchedule("tanahmerah-muara", "tanahMerahSchedule", scheduleData["tanahmerah-muara"]);
 };
 
-// Render jadwal untuk satu rute
 export const renderSchedule = (route, elementId, times) => {
   const container = document.getElementById(elementId);
   if (!container) {
@@ -43,7 +52,6 @@ export const renderSchedule = (route, elementId, times) => {
     .join("");
 };
 
-// Mendapatkan keberangkatan selanjutnya
 export const getNextDeparture = () => {
   const now = new Date();
   let nextTime = null;
@@ -63,11 +71,9 @@ export const getNextDeparture = () => {
   return { nextTime, nextRoute };
 };
 
-// Flags untuk notifikasi visual
 let fiveMinuteAlertShown = false;
 let departureAlertShown = false;
 
-// Update tampilan countdown dan trigger notifikasi visual
 export const updateCountdown = () => {
   const { nextTime, nextRoute } = getNextDeparture();
   if (!nextTime) return;
@@ -77,25 +83,22 @@ export const updateCountdown = () => {
 
   if (departureElement) {
     departureElement.textContent =
-      `Keberangkatan berikutnya untuk rute ${nextRoute}: ${nextTime.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit', hour12: false })} WIB`;
+      `Keberangkatan berikutnya untuk rute ${formatRouteName(nextRoute)}: ${nextTime.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit', hour12: false })} WIB`;
   }
 
   const now = new Date();
   const diff = nextTime - now;
 
-  // Reset flag jika jadwal masih jauh (lebih dari 5 menit)
   if (diff > 300000) {
     fiveMinuteAlertShown = false;
     departureAlertShown = false;
   }
 
-  // Peringatan 5 menit sebelum keberangkatan dengan notifikasi
   if (diff <= 300000 && diff > 0 && !fiveMinuteAlertShown) {
     fiveMinuteAlertShown = true;
     showAlert('warning', 'Peringatan: 5 menit menuju keberangkatan!', 10);
   }
 
-  // Peringatan waktu keberangkatan dengan notifikasi dan alarm
   if (diff <= 0 && !departureAlertShown) {
     departureAlertShown = true;
     showDepartureAlert();
@@ -110,14 +113,12 @@ export const updateCountdown = () => {
     countdownElement.textContent =
       `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-    // Gunakan CSS variable untuk mengubah warna countdown sesuai dengan tema
     countdownElement.style.color = diff <= 300000
       ? "var(--countdown-warning)"
       : "var(--countdown-normal)";
   }
 };
 
-// Fungsi trigger alarm (hanya memainkan suara)
 export const triggerAlarm = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -136,13 +137,11 @@ export const triggerAlarm = () => {
   }
 };
 
-// Fungsi menampilkan notifikasi keberangkatan dan memicu alarm
 export const showDepartureAlert = () => {
   showAlert('departure', 'Peringatan: Waktu keberangkatan sekarang!', 10);
   triggerAlarm();
 };
 
-// Fungsi untuk menampilkan notifikasi full layar dengan countdown
 export const showAlert = (type, message, durationSeconds) => {
   let overlay = document.getElementById('fullScreenAlert');
   if (!overlay) {
@@ -151,7 +150,7 @@ export const showAlert = (type, message, durationSeconds) => {
     overlay.className = 'full-screen-alert';
     document.body.appendChild(overlay);
   }
-  // Pilih warna latar sesuai tipe notifikasi
+ 
   let bgColor = type === 'warning' ? '#ffc107' : '#dc3545';
   overlay.style.backgroundColor = bgColor;
   overlay.innerHTML = `
@@ -176,8 +175,6 @@ export const showAlert = (type, message, durationSeconds) => {
   }, 1000);
 };
 
-
-// Memulai interval countdown
 export const startCountdown = () => {
   updateCountdown();
   setInterval(updateCountdown, COUNTDOWN_INTERVAL);

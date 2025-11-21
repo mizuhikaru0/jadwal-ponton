@@ -1,121 +1,78 @@
-const intents = [
-  {
-    intent: "nama",
-    pattern: /(nama kamu siapa|siapa namamu|siapa nama kamu|siapa kamu|siapa kamu\??)/i,
-    keywords: ["nama","siapa"],
-    responses: [
-  "Saya adalah Chatbot AI untuk Penyebrangan CV Sejahtera.",
-  "Panggil saya Chatbot, senang bertemu dengan Anda!"
-]
-  },
-  {
-    intent: "perpisahan",
-    pattern: /(selamat tinggal|dadah|bye|sampai jumpa)/i,
-    keywords: ["dadah","bye","selamat tinggal","jumpa"],
-    responses: [
-  "Sampai jumpa!",
-  "Selamat tinggal! Semoga harimu menyenangkan.",
-  "Dadah, sampai jumpa lagi!"
-]
-  },
-  {
-    intent: "jadwal_umum",
-    pattern: /(jadwal penyebrangan|waktu keberangkatan|jadwal keberangkatan)/i,
-    keywords: ["jadwal","penyebrangan","keberangkatan"],
-    responses: [
-  "<div style='white-space: pre-wrap;'>Berikut adalah jadwal penyebrangan:\n\nMuara → Tanah Merah:\n08:00, 10:00, 13:00, 15:00, 17:00\n\nTanah Merah → Muara:\n09:00, 11:00, 14:00, 16:00, 17:30\n</div>"
-]
-  },
-  {
-    intent: "jadwal_spesifik",
-    pattern: /(jadwal (pada|untuk) (hari|jam|rute) (.*)|jam berapa (ke|dari) (.*)|ada jadwal (.*))/i,
-    keywords: ["jadwal","spesifik","jam","hari","rute"],
-    responses: [
-  "Silakan tentukan rute atau hari yang Anda maksud, seperti 'jadwal dari Muara ke Tanah Merah' atau 'jadwal pada hari Jumat'."
-]
-  },
-  {
-    intent: "lokasi_terminal",
-    pattern: /(lokasi terminal|terminal di mana|alamat terminal)/i,
-    keywords: ["lokasi","terminal","alamat"],
-    responses: [
-  "Lokasi Penyeberangan:\n- Muara: Lokasi pemberangkatan pertama yang berada di muara kanal desa Bumi Pratama Mandira.\n- Tanah Merah: Dermaga tujuan yang terletak di luar desa."
-]
-  },
-  {
-    intent: "kontak_personil",
-    pattern: /(kontak|hubungi|nomor telepon)/i,
-    keywords: ["kontak","hubungi","nomor"],
-    responses: [
-  "Kontak Personil:\n- Nahkoda: Riko (0822 5286 9605)\n- ABK: Maulana (0821 7603 5125)"
-]
-  },
-  {
-    intent: "ponton_2424",
-    pattern: /mau.*nanya.*besok.*ponton.*dari.*wm.*jam.*berapa.*ya/i,
-    keywords: ["ponton","2424"],
-    responses: [
-  "jadwal penyebrangan besok dari wm dimulai dari jam 8 tepat, kemudian jam kedua jam 10"
-]
-  },
-  {
-    intent: "hari-lebaran",
-    pattern: /Mas,.*lebaran.*besok.*ponton.*masih.*buka.*nggak\?/i,
-    keywords: ["hari-lebaran"],
-    responses: [
-  "Ponton nggak pernah liburan kok"
-]
-  },
-  {
-    intent: "sapaan",
-    pattern: /halo/i,
-    keywords: ["sapaan"],
-    responses: [
-  "Iya, halo, ada yang bisa saya bantu?",
-  "Iya haloo, ada yang bisa saya bantu?"
-]
-  },
-  {
-    intent: "puasa",
-    pattern: /hari.*puasa.*libur\?/i,
-    keywords: ["puasa"],
-    responses: [
-  "enggaklah",
-  "Enggak kok"
-]
-  },
-  {
-    intent: "ponton-pagi",
-    pattern: /ponton.*pagi.*mulai.*jam.*berapa.*ya/i,
-    keywords: ["ponton-pagi"],
-    responses: [
-  "Ini dari arah mana? Dari luar mau masuk wm atau dari dalam?"
-]
-  },
-  {
-    intent: "jsdjsids",
-    pattern: /jadwal.*dari.*luar.*masuk.*ke.*wm.*paling.*pagi/i,
-    keywords: ["jsdjsids"],
-    responses: [
-  "Mulai dari jam 9"
-]
-  },
-  {
-    intent: "penutupan",
-    pattern: /^ok$/i,
-    keywords: ["penutupan"],
-    responses: [
-      "Baik, kalau ada yang ditanyakan lagi, hubungi saya"
-    ]
-  },
-  {
-    intent: "tanya-jadwal-pagi",
-    pattern: /Mau.*nanya.*jadwal.*ponton.*besok.*kalau.*dari.*wm.*ke.*tanah.*merah.*jam.*berapa.*ya\?/i,
-    keywords: ["tanya-jadwal-pagi"],
-    responses: [
-  "Besok jadwal penyebrangan ponton dari WM ke Tanah Merah itu dimulai jam 8 pagi. Selain itu, ada juga keberangkatan jam 10 pagi, jam 1 siang, jam 3 sore, dan terakhir jam 5 sore. Semoga membantu!"
-]
-  },
-];
+// js/knowledge.js
 
-export default intents;
+export const intents = [
+    {
+      id: "sapaan",
+      keywords: ["halo", "hai", "pagi", "siang", "sore", "malam", "assalamualaikum", "permisi", "tes", "hallo"],
+      responses: [
+        "Halo! Ada yang bisa saya bantu mengenai jadwal, tarif, atau rute penyebrangan?",
+        "Halo, selamat datang di layanan informasi Penyebrangan Ponton. Mau tanya apa nih?",
+        "Waalaikumsalam. Ada yang bisa dibantu?"
+      ]
+    },
+    {
+      id: "identitas",
+      keywords: ["siapa", "kamu", "bot", "robot", "nama"],
+      responses: [
+        "Saya adalah Asisten Virtual Ponton. Saya bisa bantu cek jadwal, tarif, dan info rute.",
+        "Panggil saja saya Chatbot Ponton. Saya di sini untuk membantu informasi penyebrangan Anda."
+      ]
+    },
+    {
+      id: "tarif",
+      keywords: ["tarif", "harga", "bayar", "ongkos", "biaya", "duit", "berapa", "bawa", "motor", "orang", "bonceng", "tiket"], 
+      responses: [] 
+    },
+    {
+      id: "jadwal",
+      keywords: ["jadwal", "jam", "kapan", "berangkat", "jalan", "waktu", "pukul", "pagi", "sore", "besok", "hari", "minggu", "jumat", "sekarang", "selanjutnya", "berikutnya"], 
+      responses: []
+    },
+    {
+      id: "rute",
+      keywords: ["rute", "arah", "tujuan", "kemana", "dari", "ke", "lokasi", "tempat", "jalur", "mana", "dermaga", "penyebrangan"], 
+      responses: []
+    },
+    {
+      id: "kontak",
+      keywords: ["kontak", "hubungi", "nomor", "telepon", "wa", "whatsapp", "supir", "petugas", "nahkoda", "abk", "telpon", "call"], 
+      responses: []
+    },
+    {
+      id: "wait_request", 
+      keywords: ["tunggu", "telat", "minta tunggu", "terlambat", "request", "mohon tunggu", "delay", "tahan", "mau", "tidak", "ya", "lanjut", "1", "2", "satu", "dua", "urgent", "keberatan"], 
+      responses: [] 
+    },
+    {
+      id: "terimakasih",
+      keywords: ["makasih", "trims", "thank", "suwun", "oke", "ok", "sip", "mantap", "baik"],
+      responses: [
+        "Sama-sama! Hati-hati di jalan ya.",
+        "Oke, siap! Semoga selamat sampai tujuan.",
+        "Terima kasih kembali. Kalau butuh info lagi, tanya saja ya!"
+      ]
+    },
+    {
+      id: "perpisahan",
+      keywords: ["dadah", "bye", "duluan", "pergi", "tutup"],
+      responses: [
+        "Sampai jumpa!",
+        "Hati-hati di jalan!"
+      ]
+    },
+    {
+      id: "konteks_muara",
+      keywords: ["muara", "dari mana", "asal", "berangkat dari", "titik awal", "starting point", "keberangkatan"],
+      responses: [
+        "Muara adalah titik awal penyebrangan kami. Ini merupakan dermaga di WM yang menjadi lokasi keberangkatan menuju Dermaga Tanah Merah.",
+        "Muara adalah pelabuhan/dermaga asal dari mana kapal ponton berangkat. Lokasi ini berada di WM sebelum menuju Tanah Merah."
+      ]
+    }
+  ];
+  
+  // Fallback jika tidak mengerti
+  export const fallbackResponses = [
+    "Maaf, saya kurang paham. Bisa diulangi pertanyaannya?",
+    "Saya masih belajar nih. Coba tanya soal 'jadwal', 'tarif', atau 'rute' ya.",
+    "Waduh, maksudnya gimana tuh? Coba tanya yang lebih simpel seperti 'jadwal jam berapa' atau 'harga tiket'."
+  ];
