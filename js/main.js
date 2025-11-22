@@ -229,3 +229,15 @@ function initializeChatbot() {
     localStorage.setItem("chatSession", JSON.stringify(session));
   }
 }
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then((registration) => {
+        console.log('Service Worker berhasil didaftarkan dengan scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.log('Registrasi Service Worker gagal:', error);
+      });
+  });
+}
