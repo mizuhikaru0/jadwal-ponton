@@ -20,7 +20,7 @@ export const intents = [
     },
     {
       id: "tarif",
-      keywords: ["tarif", "harga", "bayar", "ongkos", "biaya", "duit", "berapa", "bawa", "motor", "orang", "bonceng", "tiket"], 
+      keywords: ["tarif", "harga", "bayar", "ongkos", "biaya", "duit", "berapa", "bawa", "motor", "orang", "bonceng", "tiket", "motor sendiri", "boncengan",], 
       responses: [] 
     },
     {
@@ -35,7 +35,7 @@ export const intents = [
     },
     {
       id: "kontak",
-      keywords: ["kontak", "hubungi", "nomor", "telepon", "wa", "whatsapp", "supir", "petugas", "nahkoda", "abk", "telpon", "call"], 
+      keywords: ["kontak", "hubungi", "nomor", "telepon", "wa", "whatsapp", "supir", "petugas", "nahkoda", "abk", "telpon", "call", "hubung", "hubungkan"], 
       responses: []
     },
     {

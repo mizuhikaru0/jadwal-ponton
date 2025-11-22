@@ -30,6 +30,8 @@ function parseMarkdown(text) {
   if (!text) return "";
   let formattedText = text
     .replace(/\[AUTOWA:.*?\]/g, '') 
+    // BARU: Tambahkan dukungan untuk [Teks Link](URL)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/_(.*?)_/g, '<em>$1</em>');
   return formattedText.replace(/\n/g, '<br>');
@@ -100,9 +102,20 @@ function initializeChatbot() {
           const autoWaMatch = rawResponse.match(/\[AUTOWA:(.*?)\]/);
           if (autoWaMatch && autoWaMatch[1]) {
             const waUrl = autoWaMatch[1];
+            
+            // Mekanisme baru untuk mengatasi popup blocker dan membuka aplikasi WA
             setTimeout(() => {
-                window.open(waUrl, "_blank");
-            }, 500); // Delay 500ms agar user sempat melihat pesan
+                const link = document.createElement('a');
+                link.href = waUrl;
+                link.target = "_blank"; // Tetap buka di tab baru
+                link.rel = "noopener noreferrer";
+                
+                // Simulasikan klik
+                document.body.appendChild(link);
+                link.click(); 
+                document.body.removeChild(link);
+
+            }, 1500); // Delay diubah menjadi 1500ms agar user sempat membaca pesan
           }
           // ---------------------------------
 

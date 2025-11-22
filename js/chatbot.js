@@ -25,9 +25,6 @@ class Chatbot {
         };
     }
 
-    /**
-     * Normalisasi Teks: Hapus tanda baca, lowercase, trim
-     */
     cleanText(text) {
         return text.toLowerCase().replace(/[?!.,;:]/g, "").trim();
     }
@@ -97,8 +94,6 @@ class Chatbot {
         }
     }
 
-    // --- LOGIKA SPESIFIK ---
-
     /**
      * Menjawab pertanyaan kontak
      */
@@ -107,7 +102,7 @@ class Chatbot {
         contacts.forEach((c, index) => {
             response += `${index + 1}. **${c.name}**: ${c.display}\n`;
         });
-        response += "\nSilakan hubungi salah satu jika ada keperluan mendesak.";
+        response += "\nSilakan hubungi salah satu jika ada keperluan mendesak. Pilih dengan ketik **1** atau **2**.";
         return response;
     }
     
@@ -241,22 +236,20 @@ class Chatbot {
         const cleanMsg = this.cleanText(message);
         const defaultWaitMessage = "Pak, minta tunggu ya?";
         const waMessage = encodeURIComponent(defaultWaitMessage);
-        
-        // --- Multi-Turn Logic ---
 
         // 1. User memilih kontak (1 atau 2) -> Trigger AUTOWA
         if (cleanMsg.includes("1") || cleanMsg.includes("satu") || cleanMsg.includes("pilih 1")) {
             const contact = contacts[0];
             const waUrl = `https://wa.me/${contact.number}?text=${waMessage}`;
-            // MENGGUNAKAN MARKER KHUSUS: [AUTOWA]
-            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n${waUrl}\n[AUTOWA:${waUrl}]`;
+            const linkText = "Hubungi Petugas Sekarang";
+            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n[${linkText}](${waUrl})\n[AUTOWA:${waUrl}]`;
         }
         
         if (cleanMsg.includes("2") || cleanMsg.includes("dua") || cleanMsg.includes("pilih 2")) {
             const contact = contacts[1];
             const waUrl = `https://wa.me/${contact.number}?text=${waMessage}`;
-            // MENGGUNAKAN MARKER KHUSUS: [AUTOWA]
-            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n${waUrl}\n[AUTOWA:${waUrl}]`;
+            const linkText = "Hubungi Petugas Sekarang";
+            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n[${linkText}](${waUrl})\n[AUTOWA:${waUrl}]`;
         }
         
         // 2. User konfirmasi 'MAU' / 'LANJUT' 
