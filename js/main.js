@@ -3,8 +3,6 @@
 import { updateTheme, toggleTheme } from "./theme.js";
 import { renderSchedules, startCountdown, initAudioContext } from "./schedule.js"; 
 import { renderSavedRequests, handleWaitRequest } from "./waitRequest.js";
-import { renderTariffInfo } from "./tarif.js";
-import { renderRouteInfo } from "./rute.js";
 import Chatbot from "./chatbot.js";
 
 // Expose ke window agar bisa dipanggil via onclick HTML
@@ -23,8 +21,6 @@ function initializeApp() {
   renderSchedules();
   startCountdown();
   renderSavedRequests();
-  renderTariffInfo();
-  renderRouteInfo();
   
   // --- FITUR BARU ---
   initializeChatbot();

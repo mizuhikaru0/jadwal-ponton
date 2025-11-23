@@ -36,8 +36,6 @@
         <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link" href="#scheduleSection">Jadwal</a></li>
           <li class="nav-item"><a class="nav-link" href="#waitRequestModal" data-bs-toggle="modal">Minta Tunggu</a></li>
-          <li class="nav-item"><a class="nav-link" href="#tarifModal" data-bs-toggle="modal">Info Tarif</a></li>
-          <li class="nav-item"><a class="nav-link" href="#ruteModal" data-bs-toggle="modal">Info Rute</a></li>
           <li class="nav-item"><a class="nav-link" href="#chatbotModal" data-bs-toggle="modal">Chat Assistant</a></li>
           <li class="nav-item d-none d-lg-block">
             <button class="btn btn-outline-secondary ms-2" onclick="toggleTheme()">
@@ -111,44 +109,6 @@
                 <i class="bi bi-send-check"></i> Kirim Permintaan
               </button>
             </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Info Tarif -->
-    <div class="modal fade" id="tarifModal" tabindex="-1" aria-labelledby="tarifModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="tarifModalLabel">Info Tarif</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <ul id="tarifModalBody" class="list-group">
-              <!-- Data tarif akan dirender di sini -->
-            </ul>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Info Rute -->
-    <div class="modal fade" id="ruteModal" tabindex="-1" aria-labelledby="ruteModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="ruteModalLabel">Info Rute</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body" id="ruteModalBody">
-            <!-- Konten info rute akan dirender secara dinamis -->
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
           </div>
         </div>
       </div>
