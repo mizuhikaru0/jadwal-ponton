@@ -11,12 +11,15 @@ export const tariffData = [
     const container = document.getElementById("tarifModalBody");
     if (!container) return;
     container.innerHTML = tariffData.map(item => {
+      // FIX: Cek apakah price berupa angka untuk menambahkan "Rp"
+      const isNumeric = !isNaN(item.price.replace('.',''));
+      const displayPrice = isNumeric ? `Rp ${item.price}` : item.price;
+      
       return item.price
         ? `<li class="list-group-item d-flex justify-content-between align-items-center">
              ${item.description}
-             <span class="badge bg-primary rounded-pill">${item.price}</span>
+             <span class="badge bg-primary rounded-pill">${displayPrice}</span>
            </li>`
         : `<li class="list-group-item">${item.description}</li>`;
     }).join("");
   }
-  

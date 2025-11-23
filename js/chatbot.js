@@ -1,11 +1,10 @@
 // js/chatbot.js
 
-import { intents, fallbackResponses } from "./knowledge.js";
 import { tariffData } from "./tarif.js";
 import { routeInfo } from "./rute.js";
-import { scheduleData, adjustTimeIfFriday, getNextDeparture, formatRouteName } from "./schedule.js";
+import { scheduleData, formatRouteName } from "./schedule.js";
 
-
+// Data Kontak
 const contacts = [
     { name: "Riko (Nahkoda)", number: "6282252869605", display: "0822 5286 9605" },
     { name: "Ihsan Maulana (ABK)", number: "6282211061254", display: "0822 1106 1254" }
@@ -13,286 +12,128 @@ const contacts = [
 
 class Chatbot {
     constructor() {
-        this.intents = intents;
-        this.fallbackResponses = fallbackResponses;
-        this.routeAliases = {
-            "tanahmerah": "Tanah Merah",
-            "tanah-merah": "Tanah Merah",
-            "tanah merah": "Tanah Merah",
-            "merah": "Tanah Merah",
-            "muara": "Muara",
-            "wm": "Muara"
-        };
-    }
-
-    cleanText(text) {
-        return text.toLowerCase().replace(/[?!.,;:]/g, "").trim();
-    }
-
-    /**
-     * Sistem Skor Sederhana untuk menentukan Intent
-     */
-    analyzeIntent(message) {
-        const cleanedMessage = this.cleanText(message);
-        const words = cleanedMessage.split(/\s+/);
+        // --- KONFIGURASI ---
+        // Pastikan API Key Anda ditaruh di sini tanpa spasi tambahan
+        this.apiKey = "AIzaSyDCFtx1qVccW6_BwvRW04DOdcLqmTIR7Vg"; 
         
-        let bestIntent = null;
-        let maxScore = 0;
+        // Gunakan nama model yang lebih standar (flash biasanya paling cepat & stabil)
+        this.modelName = "gemini-flash-latest"; 
 
-        this.intents.forEach(intent => {
-            let score = 0;
-            intent.keywords.forEach(keyword => {
-                // Skor +2 jika kata persis sama
-                if (words.includes(keyword)) score += 2;
-                // Skor +1 jika mengandung kata (partial match)
-                else if (cleanedMessage.includes(keyword)) score += 1;
-            });
+        const cleanKey = this.apiKey.trim();
 
-            if (score > maxScore) {
-                maxScore = score;
-                bestIntent = intent;
+        this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
+    }
+
+    generateSystemPrompt() {
+        // 1. Format Data Jadwal
+        let jadwalText = "";
+        Object.keys(scheduleData).forEach(route => {
+            jadwalText += `- Rute ${formatRouteName(route)}: ${scheduleData[route].join(", ")} WIB\n`;
+        });
+        
+        // 2. Format Data Tarif
+        let tarifText = "";
+        tariffData.forEach(t => {
+            let hargaStr = t.price;
+            const priceClean = t.price.replace(/\D/g, '');
+            if (priceClean && !isNaN(priceClean) && t.price.toLowerCase() !== "tidak ada") {
+                 hargaStr = "Rp " + new Intl.NumberFormat('id-ID').format(priceClean);
             }
+            tarifText += `- ${t.description}: ${hargaStr}\n`;
         });
 
-        // Ambang batas skor (threshold) agar tidak asal jawab
-        return maxScore >= 1 ? bestIntent : null;
-    }
-
-    /**
-     * Generator Respon Dinamis
-     */
-    getResponse(rawMessage) {
-        const message = rawMessage || "";
-        if (!message.trim()) return "Silakan ketik sesuatu...";
-
-        const intent = this.analyzeIntent(message);
-
-        // 1. Jika Intent tidak ditemukan
-        if (!intent) {
-            return this.getRandom(this.fallbackResponses);
-        }
-
-        // 2. Handler Khusus berdasarkan ID Intent
-        switch (intent.id) {
-            case "tarif":
-                return this.generateTariffResponse(message);
-            case "jadwal":
-                return this.generateScheduleResponse(message);
-            case "rute":
-                return this.generateRouteResponse(message);
-            case "wait_request": 
-                return this.generateWaitRequestResponse(message);
-            case "kontak":
-                return this.generateContactResponse();
-            case "sapaan":
-            case "identitas":
-            case "terimakasih":
-            case "perpisahan":
-                return this.getRandom(intent.responses);
-            default:
-                return this.getRandom(this.fallbackResponses);
-        }
-    }
-
-    /**
-     * Menjawab pertanyaan kontak
-     */
-    generateContactResponse() {
-        let response = "📞 **Kontak Petugas Ponton:**\n";
-        contacts.forEach((c, index) => {
-            response += `${index + 1}. **${c.name}**: ${c.display}\n`;
-        });
-        response += "\nSilakan hubungi salah satu jika ada keperluan mendesak. Pilih dengan ketik **1** atau **2**.";
-        return response;
-    }
-    
-    /**
-     * Menjawab pertanyaan tarif dengan data dari tarif.js
-     */
-    generateTariffResponse(message) {
-        const lowerMsg = this.cleanText(message);
-        let response = "📋 **Info Tarif Penyebrangan:**\n";
-        
-        let specificFound = false;
-        
-        if (lowerMsg.includes("motor")) {
-            const motorRates = tariffData.filter(t => t.description.toLowerCase().includes("motor"));
-            if (motorRates.length > 0) {
-                response = "🏍️ **Tarif Motor:**\n";
-                motorRates.forEach(item => {
-                    response += `- ${item.description}: **Rp ${item.price}**\n`;
-                });
-                specificFound = true;
-            }
-        } 
-        
-        if (lowerMsg.includes("orang") || lowerMsg.includes("sendiri")) {
-            const personRate = tariffData.find(t => t.description.toLowerCase().includes("orang"));
-            if (personRate) {
-                response += `🚶 ${personRate.description}: **Rp ${personRate.price}**\n`;
-                specificFound = true;
-            }
-        }
-
-        if (!specificFound) {
-            tariffData.forEach(item => {
-                if (item.price) {
-                    response += `- ${item.description}: **Rp ${item.price}**\n`;
-                } else {
-                    response += `ℹ️ _${item.description}_\n`;
-                }
-            });
-        }
-
-        return response;
-    }
-
-    /**
-     * Menjawab pertanyaan rute dengan data dari rute.js
-     */
-    generateRouteResponse(message) {
-        let response = "🗺️ **Info Rute:**\n\n";
+        // 3. Format Data Rute
+        let ruteText = "";
         routeInfo.routes.forEach(r => {
-            response += `📍 **${r.name}**\n`;
-            response += `   _${r.details[0]}_\n\n`; 
+            ruteText += `- ${r.name}: ${r.details[0]}\n`;
         });
-        return response;
+
+        // 4. Format Data Kontak
+        let kontakText = "";
+        contacts.forEach(c => {
+            kontakText += `- ${c.name}: ${c.display} (Nomor WA: ${c.number})\n`;
+        });
+
+        return `
+        Kamu adalah "Asisten Virtual Ponton".
+        Jawablah pertanyaan berdasarkan data berikut:
+        
+        === DATA JADWAL ===
+        ${jadwalText}
+        (Jumat: Jadwal 13:00 mundur ke 13:30 WIB).
+
+        === DATA TARIF ===
+        ${tarifText}
+
+        === DATA RUTE ===
+        ${ruteText}
+
+        === KONTAK ===
+        ${kontakText}
+
+        Aturan: Jawab sopan, singkat, bahasa Indonesia. Jangan mengarang data.
+        `;
     }
 
-    /**
-     * Menjawab pertanyaan jadwal dengan data dari schedule.js
-     */
-    generateScheduleResponse(message) {
-        const cleanMsg = this.cleanText(message);
-        
-        let selectedRouteKey = null;
-        let selectedRouteLabel = "";
+    async getResponse(userMessage) {
+        if (!userMessage.trim()) return "Silakan ketik pertanyaan Anda.";
 
-        for (const [alias, label] of Object.entries(this.routeAliases)) {
-            if (cleanMsg.includes(alias)) {
-                const realKey = Object.keys(scheduleData).find(k => 
-                    k.toLowerCase().includes(label.toLowerCase().replace(/\s/g, '')) || 
-                    this.routeAliases[k.split('-')[0].toLowerCase()] === label
-                );
+        // Cek sederhana apakah API Key masih default
+        if (this.apiKey === "MASUKKAN_API_KEY_ANDA_DISINI" || this.apiKey.length < 10) {
+            return "⚠️ Error: API Key belum dipasang di file js/chatbot.js";
+        }
+
+        const systemInstruction = this.generateSystemPrompt();
+
+        const requestBody = {
+            contents: [{
+                role: "user",
+                parts: [{ text: systemInstruction + "\n\nUser: " + userMessage + "\nAsisten:" }]
+            }]
+        };
+
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(requestBody)
+            });
+
+            // --- BAGIAN DEBUGGING ERROR ---
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({}));
+                console.error("⚠️ Detail Error dari Google:", errorBody);
                 
-                if (realKey) {
-                    selectedRouteKey = realKey;
-                    selectedRouteLabel = label;
-                    break;
+                let pesanError = "Terjadi kesalahan sistem.";
+                
+                if (response.status === 400) {
+                    pesanError = "⚠️ Error 400: Format request ditolak (INVALID_ARGUMENT).";
+                } else if (response.status === 403) {
+                    pesanError = "⚠️ Error 403: API Key salah atau tidak valid.";
+                } else if (response.status === 429) {
+                    pesanError = "⚠️ Error 429: Kuota API habis (Too Many Requests).";
+                } else if (response.status === 500) {
+                    pesanError = "⚠️ Error 500: Server Google sedang bermasalah.";
+                } else {
+                    pesanError = `⚠️ Error HTTP: ${response.status}`;
                 }
+
+                // Kembalikan pesan error spesifik ini ke chatbox agar user melihatnya
+                throw new Error(pesanError);
             }
-        }
 
-        const timeMatch = cleanMsg.match(/(\d{1,2})([.:]\d{2})?/);
-        if (timeMatch) {
-            const hourQuery = parseInt(timeMatch[1]);
-            let foundTimes = [];
-            
-            Object.keys(scheduleData).forEach(route => {
-                scheduleData[route].forEach(time => {
-                    const adjusted = adjustTimeIfFriday(time);
-                    const hourSchedule = parseInt(adjusted.split(':')[0]);
-                    if (hourSchedule === hourQuery) {
-                        foundTimes.push(`- ${adjusted} WIB (Rute ${formatRouteName(route)})`);
-                    }
-                });
-            });
-
-            if (foundTimes.length > 0) {
-                return `✅ Ya, ada keberangkatan sekitar jam ${hourQuery}:\n${foundTimes.join("\n")}\n_Cek **Jadwal** di menu utama untuk rincian._`;
+            const data = await response.json();
+            if (data.candidates && data.candidates.length > 0) {
+                return data.candidates[0].content.parts[0].text;
             } else {
-                return `❌ Tidak ada keberangkatan tepat di jam ${hourQuery} (atau sudah lewat). Silakan cek *Keberangkatan Berikutnya* atau *Jadwal Lengkap*.`;
+                return "Maaf, AI tidak memberikan jawaban (Respon kosong).";
             }
-        }
-        
-        if (cleanMsg.includes("selanjutnya") || cleanMsg.includes("berikutnya") || cleanMsg.includes("sekarang")) {
-            const { nextTime, nextRoute } = getNextDeparture();
-            if (nextTime) {
-                const nextTimeStr = nextTime.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit', hour12: false });
-                const routeName = formatRouteName(nextRoute);
-                return `🚤 **Keberangkatan Berikutnya:**\nUntuk rute **${routeName}** pada pukul **${nextTimeStr} WIB**.`;
-            }
-        }
 
-        if (selectedRouteKey) {
-            const times = scheduleData[selectedRouteKey].map(t => adjustTimeIfFriday(t)).join(", ");
-            return `🕒 **Jadwal ${formatRouteName(selectedRouteKey)}:**\n${times} WIB\n\n_Catatan: Jumat jam 13:00 WIB mundur ke 13:30 WIB._`;
-        } else {
-            let response = "🕒 **Jadwal Keberangkatan Lengkap:**\n";
-            Object.keys(scheduleData).forEach(key => {
-                const routeName = formatRouteName(key);
-                const times = scheduleData[key].map(t => adjustTimeIfFriday(t)).join(", ");
-                response += `\n⚓ **${routeName}**\n   ${times} WIB`;
-            });
-            response += "\n\n_Catatan: Jumat jam 13:00 WIB mundur ke 13:30 WIB._";
-            return response;
+        } catch (error) {
+            console.error("Error Fetch:", error);
+            // Tampilkan error asli ke pengguna
+            return `${error.message}`;
         }
-    }
-
-    /**
-     * Menjawab pertanyaan minta tunggu (wait request)
-     */
-    generateWaitRequestResponse(message) {
-        const cleanMsg = this.cleanText(message);
-        const defaultWaitMessage = "Pak, minta tunggu ya?";
-        const waMessage = encodeURIComponent(defaultWaitMessage);
-
-        // 1. User memilih kontak (1 atau 2) -> Trigger AUTOWA
-        if (cleanMsg.includes("1") || cleanMsg.includes("satu") || cleanMsg.includes("pilih 1")) {
-            const contact = contacts[0];
-            const waUrl = `https://wa.me/${contact.number}?text=${waMessage}`;
-            const linkText = "Hubungi Petugas Sekarang";
-            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n[${linkText}](${waUrl})\n[AUTOWA:${waUrl}]`;
-        }
-        
-        if (cleanMsg.includes("2") || cleanMsg.includes("dua") || cleanMsg.includes("pilih 2")) {
-            const contact = contacts[1];
-            const waUrl = `https://wa.me/${contact.number}?text=${waMessage}`;
-            const linkText = "Hubungi Petugas Sekarang";
-            return `Anda memilih **${contact.name}**.\n\nSistem akan otomatis membuka WhatsApp dalam beberapa detik. Jika tidak berhasil, silakan klik tautan ini:\n[${linkText}](${waUrl})\n[AUTOWA:${waUrl}]`;
-        }
-        
-        // 2. User konfirmasi 'MAU' / 'LANJUT' 
-        if (cleanMsg.includes("mau") || cleanMsg.includes("lanjut") || cleanMsg.includes("ya") || cleanMsg.includes("setuju")) {
-            let response = "Baik, silakan pilih salah satu petugas yang ingin Anda hubungi untuk konfirmasi tunggu 5 menit:\n\n";
-            response += `1. **${contacts[0].name}** (${contacts[0].display})\n`;
-            response += `2. **${contacts[1].name}** (${contacts[1].display})\n\n`;
-            response += "Ketik **1** atau **2** untuk memilih.";
-            return response;
-        }
-
-        // 3. User mengatakan 'TIDAK' / 'KEBERATAN' (Prompt untuk cek urgen)
-        if (cleanMsg.includes("tidak") || cleanMsg.includes("keberatan") || cleanMsg.includes("enggak") || cleanMsg.includes("tdk") || cleanMsg.includes("nggak")) {
-            return `Baik. Apakah kondisi Anda **sangat urgen** (misalnya ada keluarga meninggal/sakit parah) yang membuat Anda butuh ditunggu lebih lama dari 5 menit?
-            
-            Ketik **'URGENT'** jika ya, atau **'TIDAK URGEN'** jika tidak.`;
-        }
-        
-        // 4. User konfirmasi 'URGENT' 
-        if (cleanMsg.includes("urgent") || cleanMsg.includes("sangat urgen") || cleanMsg.includes("penting")) {
-            let response = "Baik, karena kondisi urgen, kami akan meminta petugas memberikan toleransi waktu lebih panjang. Segera hubungi salah satu petugas di bawah ini:\n\n";
-            response += `1. **${contacts[0].name}** (${contacts[0].display})\n`;
-            response += `2. **${contacts[1].name}** (${contacts[1].display})\n\n`;
-            response += "Ketik **1** atau **2** untuk memilih.";
-            return response;
-        }
-        
-        // 5. User konfirmasi 'TIDAK URGEN'
-        if (cleanMsg.includes("tidak urgen") || cleanMsg.includes("tdk urgent")) {
-            return "Terima kasih atas kejujuran Anda. Mohon dipercepat atau bersiap menunggu jadwal penyebrangan berikutnya jika sudah terlewat, demi ketertiban bersama.";
-        }
-
-        // 6. Respon 'wait_request' Awal (Default)
-        let response = "🙏 **Permintaan Tunggu (Wait Request):**\n\n";
-        response += "Kami dapat memintakan penyebrangan untuk menunggu Anda, namun **maksimal hanya 5 menit** saja. Ini untuk menjaga agar jadwal yang lain tidak ikut terganggu.\n\n";
-        response += "Apakah Anda **MAU** kami teruskan permintaan tunggu 5 menit ini ke petugas?\n\n";
-        response += "Ketik **'MAU'** untuk melanjutkan, atau **'TIDAK'** jika Anda keberatan dengan batas 5 menit.";
-        return response;
-    }
-
-    // Utility Helper
-    getRandom(array) {
-        return array[Math.floor(Math.random() * array.length)];
     }
 }
 
