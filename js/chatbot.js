@@ -19,7 +19,6 @@ const rulesData = [
     "Pembayaran tarif hanya dilayani secara tunai di loket."
 ];
 
-// --- [LANGKAH 1: DEFINISIKAN] DATA KEBIJAKAN TUNGGU BARU ---
 const waitPolicyData = [
     "Penumpang dapat meminta pelonggaran jadwal (minta tunggu) dengan menghubungi petugas.",
     "Toleransi waktu tunggu standar adalah MAKSIMAL 5 menit (Tidak boleh lebih).",
