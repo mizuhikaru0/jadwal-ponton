@@ -3,9 +3,7 @@
 import { tariffData } from "./tarif.js";
 import { routeInfo } from "./rute.js";
 import { scheduleData, formatRouteName } from "./schedule.js";
-import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({});
 // Data Kontak
 const contacts = [
     { name: "Riko (Nahkoda)", number: "6282252869605", display: "0822 5286 9605" },
