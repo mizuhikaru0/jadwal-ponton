@@ -10,17 +10,28 @@ const contacts = [
     { name: "Ihsan Maulana (ABK)", number: "6282211061254", display: "0822 1106 1254" }
 ];
 
+// Data Peraturan Umum
+const rulesData = [
+    "Penumpang boleh naik ke atas ruang sopir atau nahkoda tapi dengan aturan yang berlaku.",
+    "Dilarang merokok di ruangan nahkoda.",
+    "Penumpang wajib mengikuti instruksi dari Nahkoda dan ABK.",
+    "Barang bawaan basah seperti udang, ikan yang masih meneteskan air, kendaraan motornya harus diparkir di bagian paling depan kapal ponton.",
+    "Pembayaran tarif hanya dilayani secara tunai di loket."
+];
+
+// --- [LANGKAH 1: DEFINISIKAN] DATA KEBIJAKAN TUNGGU BARU ---
+const waitPolicyData = [
+    "Penumpang dapat meminta pelonggaran jadwal (minta tunggu) dengan menghubungi petugas.",
+    "Toleransi waktu tunggu standar adalah MAKSIMAL 5 menit (Tidak boleh lebih).",
+    "PENGECUALIAN KHUSUS (Sangat Urgent): Jika ada keluarga meninggal, kecelakaan, melahirkan, atau sakit parah.",
+    "Untuk kondisi urgent di atas, toleransi waktu bisa lebih dari 5 menit, TETAPI wajib berunding/konfirmasi dulu dengan petugas."
+];
+
 class Chatbot {
     constructor() {
-        // --- KONFIGURASI ---
-        // Pastikan API Key Anda ditaruh di sini tanpa spasi tambahan
+        // --- KONFIGURASI API ---
         this.apiKey = "AIzaSyDCFtx1qVccW6_BwvRW04DOdcLqmTIR7Vg"; 
-        
-        // Gunakan nama model yang lebih standar (flash biasanya paling cepat & stabil)
         this.modelName = "gemini-flash-latest"; 
-
-        const cleanKey = this.apiKey.trim();
-
         this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
     }
 
@@ -53,14 +64,33 @@ class Chatbot {
         contacts.forEach(c => {
             kontakText += `- ${c.name}: ${c.display} (Nomor WA: ${c.number})\n`;
         });
+        
+        // 5. Format Data Peraturan Umum
+        let rulesText = "";
+        rulesData.forEach(rule => {
+            rulesText += `- ${rule}\n`;
+        });
 
+        // --- [LANGKAH 2: FORMAT] DATA KEBIJAKAN TUNGGU ---
+        let waitPolicyText = "";
+        waitPolicyData.forEach(item => {
+            waitPolicyText += `- ${item}\n`;
+        });
+
+        // --- [LANGKAH 3: INJEKSI] KE SYSTEM PROMPT ---
         return `
         Kamu adalah "Asisten Virtual Ponton".
-        Jawablah pertanyaan berdasarkan data berikut:
-        
+        Tugas utama: Menjawab pertanyaan pengguna seputar Jadwal, Tarif, Rute, Kontak, Peraturan, dan Kebijakan Tunggu.
+
+        === ATURAN MENJAWAB ===
+        1. Jawab dengan ramah, singkat, dan gunakan Bahasa Indonesia.
+        2. Gunakan data di bawah ini sebagai sumber kebenaran mutlak.
+        3. Jika ditanya hal di luar topik, tolak dengan sopan.
+        4. Kenali waktu terkini saat menjawab ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}.
+
         === DATA JADWAL ===
         ${jadwalText}
-        (Jumat: Jadwal 13:00 mundur ke 13:30 WIB).
+        (PENTING: Khusus hari Jumat, jadwal jam 13:00 SELALU mundur menjadi 13:30 WIB).
 
         === DATA TARIF ===
         ${tarifText}
@@ -68,29 +98,55 @@ class Chatbot {
         === DATA RUTE ===
         ${ruteText}
 
-        === KONTAK ===
+        === KONTAK PETUGAS ===
         ${kontakText}
+        
+        === DATA PERATURAN UMUM ===
+        ${rulesText}
 
-        Aturan: Jawab sopan, singkat, bahasa Indonesia. Jangan mengarang data.
+        === KEBIJAKAN MINTA TUNGGU / PENUNDAAN JADWAL ===
+        ${waitPolicyText}
+        (Penting: Tegaskan soal batas 5 menit kecuali untuk kondisi darurat yang disebutkan di atas).
         `;
     }
 
-    async getResponse(userMessage) {
+    async getResponse(userMessage, chatHistory = []) {
         if (!userMessage.trim()) return "Silakan ketik pertanyaan Anda.";
 
-        // Cek sederhana apakah API Key masih default
-        if (this.apiKey === "MASUKKAN_API_KEY_ANDA_DISINI" || this.apiKey.length < 10) {
+        if (this.apiKey.includes("MASUKKAN_API_KEY")) {
             return "⚠️ Error: API Key belum dipasang di file js/chatbot.js";
         }
 
         const systemInstruction = this.generateSystemPrompt();
 
-        const requestBody = {
-            contents: [{
+        const contents = [
+            {
                 role: "user",
-                parts: [{ text: systemInstruction + "\n\nUser: " + userMessage + "\nAsisten:" }]
-            }]
-        };
+                parts: [{ text: systemInstruction }]
+            },
+            {
+                role: "model",
+                parts: [{ text: "Baik, saya mengerti. Saya siap membantu pengguna." }]
+            }
+        ];
+
+        const recentHistory = chatHistory.slice(-10);
+        recentHistory.forEach(msg => {
+            const role = msg.type === "user" ? "user" : "model";
+            if(msg.text && msg.text.trim()) {
+                contents.push({
+                    role: role,
+                    parts: [{ text: msg.text }]
+                });
+            }
+        });
+
+        contents.push({
+            role: "user",
+            parts: [{ text: userMessage }]
+        });
+
+        const requestBody = { contents: contents };
 
         try {
             const response = await fetch(this.apiUrl, {
@@ -99,40 +155,33 @@ class Chatbot {
                 body: JSON.stringify(requestBody)
             });
 
-            // --- BAGIAN DEBUGGING ERROR ---
             if (!response.ok) {
-                const errorBody = await response.json().catch(() => ({}));
-                console.error("⚠️ Detail Error dari Google:", errorBody);
-                
                 let pesanError = "Terjadi kesalahan sistem.";
-                
-                if (response.status === 400) {
-                    pesanError = "⚠️ Error 400: Format request ditolak (INVALID_ARGUMENT).";
-                } else if (response.status === 403) {
-                    pesanError = "⚠️ Error 403: API Key salah atau tidak valid.";
-                } else if (response.status === 429) {
-                    pesanError = "⚠️ Error 429: Kuota API habis (Too Many Requests).";
-                } else if (response.status === 500) {
-                    pesanError = "⚠️ Error 500: Server Google sedang bermasalah.";
-                } else {
-                    pesanError = `⚠️ Error HTTP: ${response.status}`;
-                }
-
-                // Kembalikan pesan error spesifik ini ke chatbox agar user melihatnya
+                if (response.status === 429) pesanError = "⚠️ Terlalu banyak permintaan.";
+                else if (response.status === 403) pesanError = "⚠️ API Key bermasalah.";
                 throw new Error(pesanError);
             }
 
             const data = await response.json();
-            if (data.candidates && data.candidates.length > 0) {
+            
+            if (data.candidates && 
+                data.candidates.length > 0 && 
+                data.candidates[0].content && 
+                data.candidates[0].content.parts && 
+                data.candidates[0].content.parts.length > 0) {
+                
                 return data.candidates[0].content.parts[0].text;
+                
             } else {
-                return "Maaf, AI tidak memberikan jawaban (Respon kosong).";
+                if (data.promptFeedback && data.promptFeedback.blockReason) {
+                    return "Maaf, pertanyaan Anda terdeteksi melanggar kebijakan konten keamanan.";
+                }
+                return "Maaf, saya tidak bisa menjawab saat ini.";
             }
 
         } catch (error) {
             console.error("Error Fetch:", error);
-            // Tampilkan error asli ke pengguna
-            return `${error.message}`;
+            return error.message; 
         }
     }
 }
