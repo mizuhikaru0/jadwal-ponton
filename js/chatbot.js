@@ -31,7 +31,7 @@ const waitPolicyData = [
 class Chatbot {
     constructor() {
         // --- KONFIGURASI API ---
-        this.apiKey = "AIzaSyDCFtx1qVccW6_BwvRW04DOdcLqmTIR7Vg"; 
+        this.apiKey = "AIzaSyAMPCIB4TjFFcJo8QO2XjEjukKkqanq9eE"; 
         this.modelName = "gemini-flash-latest"; 
         this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
     }
@@ -84,8 +84,8 @@ class Chatbot {
         Tugas utama: Menjawab pertanyaan pengguna seputar Jadwal, Tarif, Rute, Kontak, Peraturan, dan Kebijakan Tunggu.
 
         === ATURAN MENJAWAB ===
-        1. Jawab dengan ramah, singkat, dan gunakan Bahasa Indonesia.
-        2. Gunakan data di bawah ini sebagai sumber kebenaran mutlak.
+        1. Jawab dengan ramah, singkat, leluasa, gunakan Bahasa Indonesia.
+        2. Gunakan data di bawah ini sebagai sumber kebenaran mutlak, tapi kamu bisa menjawab lebih fleksibel, selama tidak melenceng dari data.
         3. Jika ditanya hal di luar topik, tolak dengan sopan.
         4. Kenali waktu terkini saat menjawab ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}.
 
