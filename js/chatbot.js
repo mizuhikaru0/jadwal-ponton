@@ -3,9 +3,9 @@
 import { tariffData } from "./tarif.js";
 import { routeInfo } from "./rute.js";
 import { scheduleData, formatRouteName } from "./schedule.js";
-import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({});
+// HAPUS IMPORT GoogleGenAI (Tidak diperlukan lagi di frontend)
+
 // Data Kontak
 const contacts = [
     { name: "Riko (Nahkoda)", number: "6282252869605", display: "0822 5286 9605" },
@@ -30,10 +30,9 @@ const waitPolicyData = [
 
 class Chatbot {
     constructor() {
-        // --- KONFIGURASI API ---
-        this.apiKey = "AIzaSyAMPCIB4TjFFcJo8QO2XjEjukKkqanq9eE"; 
-        this.modelName = "gemini-flash-latest"; 
-        this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
+        // --- KONFIGURASI KE SERVER LOKAL ---
+        // Arahkan ke server yang sedang berjalan di terminal VS Code
+        this.apiUrl = "http://localhost:3000/api/chat"; 
     }
 
     generateSystemPrompt() {
@@ -114,10 +113,9 @@ class Chatbot {
     async getResponse(userMessage, chatHistory = []) {
         if (!userMessage.trim()) return "Silakan ketik pertanyaan Anda.";
 
-        if (this.apiKey.includes("MASUKKAN_API_KEY")) {
-            return "⚠️ Error: API Key belum dipasang di file js/chatbot.js";
-        }
-
+        // HAPUS PENGECEKAN API KEY DI SINI
+        // Karena apiKey sudah tidak ada di file ini, pengecekan ini akan bikin error.
+        
         const systemInstruction = this.generateSystemPrompt();
 
         const contents = [
@@ -150,6 +148,7 @@ class Chatbot {
         const requestBody = { contents: contents };
 
         try {
+            // Fetch ke SERVER LOCALHOST
             const response = await fetch(this.apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -158,8 +157,9 @@ class Chatbot {
 
             if (!response.ok) {
                 let pesanError = "Terjadi kesalahan sistem.";
+                // Error handling sederhana berdasarkan status dari server
                 if (response.status === 429) pesanError = "⚠️ Terlalu banyak permintaan.";
-                else if (response.status === 403) pesanError = "⚠️ API Key bermasalah.";
+                else if (response.status === 500) pesanError = "⚠️ Server backend bermasalah.";
                 throw new Error(pesanError);
             }
 
@@ -182,7 +182,8 @@ class Chatbot {
 
         } catch (error) {
             console.error("Error Fetch:", error);
-            return error.message; 
+            // Pesan error lebih jelas
+            return "Maaf, tidak dapat terhubung ke server. Pastikan terminal 'node server.js' sedang berjalan."; 
         }
     }
 }
