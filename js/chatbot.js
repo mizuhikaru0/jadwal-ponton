@@ -122,7 +122,7 @@ class Chatbot {
             }
         ];
 
-        const recentHistory = chatHistory.slice(-10);
+        const recentHistory = chatHistory.slice(-4);
         recentHistory.forEach(msg => {
             const role = msg.type === "user" ? "user" : "model";
             if(msg.text && msg.text.trim()) {
