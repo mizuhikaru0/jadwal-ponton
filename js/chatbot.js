@@ -29,7 +29,7 @@ const waitPolicyData = [
 class Chatbot {
     constructor() {
         // --- KONFIGURASI KE SERVER LOKAL ---
-        this.apiUrl = "http://localhost:3000/api/chat"; 
+        this.apiUrl = "/.netlify/functions/chat"; 
     }
 
     generateSystemPrompt() {
