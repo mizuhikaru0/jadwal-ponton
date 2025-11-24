@@ -2,26 +2,21 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch');
+const fetch = require('node-fetch'); // Kita pakai ini lagi
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Izinkan frontend mengakses server ini
 app.use(cors());
 app.use(express.json());
 
-// Endpoint Chatbot
 app.post('/api/chat', async (req, res) => {
     try {
         const userPayload = req.body;
-        
-        // Ambil API Key dari .env (AMAN)
         const apiKey = process.env.GEMINI_API_KEY;
         const modelName = "gemini-flash-latest"; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-        // Kirim ke Google
         const response = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

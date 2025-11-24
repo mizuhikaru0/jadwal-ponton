@@ -4,8 +4,6 @@ import { tariffData } from "./tarif.js";
 import { routeInfo } from "./rute.js";
 import { scheduleData, formatRouteName } from "./schedule.js";
 
-// HAPUS IMPORT GoogleGenAI (Tidak diperlukan lagi di frontend)
-
 // Data Kontak
 const contacts = [
     { name: "Riko (Nahkoda)", number: "6282252869605", display: "0822 5286 9605" },
@@ -31,7 +29,6 @@ const waitPolicyData = [
 class Chatbot {
     constructor() {
         // --- KONFIGURASI KE SERVER LOKAL ---
-        // Arahkan ke server yang sedang berjalan di terminal VS Code
         this.apiUrl = "http://localhost:3000/api/chat"; 
     }
 
@@ -41,7 +38,7 @@ class Chatbot {
         Object.keys(scheduleData).forEach(route => {
             jadwalText += `- Rute ${formatRouteName(route)}: ${scheduleData[route].join(", ")} WIB\n`;
         });
-        
+
         // 2. Format Data Tarif
         let tarifText = "";
         tariffData.forEach(t => {
@@ -64,20 +61,19 @@ class Chatbot {
         contacts.forEach(c => {
             kontakText += `- ${c.name}: ${c.display} (Nomor WA: ${c.number})\n`;
         });
-        
+
         // 5. Format Data Peraturan Umum
         let rulesText = "";
         rulesData.forEach(rule => {
             rulesText += `- ${rule}\n`;
         });
 
-        // --- [LANGKAH 2: FORMAT] DATA KEBIJAKAN TUNGGU ---
+        // 6. Format Data Kebijakan Tunggu
         let waitPolicyText = "";
         waitPolicyData.forEach(item => {
             waitPolicyText += `- ${item}\n`;
         });
 
-        // --- [LANGKAH 3: INJEKSI] KE SYSTEM PROMPT ---
         return `
         Kamu adalah "Asisten Virtual Ponton".
         Tugas utama: Menjawab pertanyaan pengguna seputar Jadwal, Tarif, Rute, Kontak, Peraturan, dan Kebijakan Tunggu.
@@ -100,7 +96,7 @@ class Chatbot {
 
         === KONTAK PETUGAS ===
         ${kontakText}
-        
+
         === DATA PERATURAN UMUM ===
         ${rulesText}
 
@@ -113,9 +109,6 @@ class Chatbot {
     async getResponse(userMessage, chatHistory = []) {
         if (!userMessage.trim()) return "Silakan ketik pertanyaan Anda.";
 
-        // HAPUS PENGECEKAN API KEY DI SINI
-        // Karena apiKey sudah tidak ada di file ini, pengecekan ini akan bikin error.
-        
         const systemInstruction = this.generateSystemPrompt();
 
         const contents = [
@@ -148,7 +141,6 @@ class Chatbot {
         const requestBody = { contents: contents };
 
         try {
-            // Fetch ke SERVER LOCALHOST
             const response = await fetch(this.apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -157,22 +149,19 @@ class Chatbot {
 
             if (!response.ok) {
                 let pesanError = "Terjadi kesalahan sistem.";
-                // Error handling sederhana berdasarkan status dari server
                 if (response.status === 429) pesanError = "⚠️ Terlalu banyak permintaan.";
                 else if (response.status === 500) pesanError = "⚠️ Server backend bermasalah.";
                 throw new Error(pesanError);
             }
 
             const data = await response.json();
-            
+
             if (data.candidates && 
                 data.candidates.length > 0 && 
                 data.candidates[0].content && 
                 data.candidates[0].content.parts && 
                 data.candidates[0].content.parts.length > 0) {
-                
                 return data.candidates[0].content.parts[0].text;
-                
             } else {
                 if (data.promptFeedback && data.promptFeedback.blockReason) {
                     return "Maaf, pertanyaan Anda terdeteksi melanggar kebijakan konten keamanan.";
@@ -182,7 +171,6 @@ class Chatbot {
 
         } catch (error) {
             console.error("Error Fetch:", error);
-            // Pesan error lebih jelas
             return "Maaf, tidak dapat terhubung ke server. Pastikan terminal 'node server.js' sedang berjalan."; 
         }
     }
