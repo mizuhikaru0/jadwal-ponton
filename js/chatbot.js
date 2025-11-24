@@ -29,7 +29,7 @@ const waitPolicyData = [
 class Chatbot {
     constructor() {
         // --- KONFIGURASI API ---
-        this.apiKey = "AIzaSyAMPCIB4TjFFcJo8QO2XjEjukKkqanq9eE"; 
+        this.apiKey = "AIzaSyABdAdx-TV3vEMU5uoLchFhI1ZTGI-ju4w"; 
         this.modelName = "gemini-flash-latest"; 
         this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`;
     }
