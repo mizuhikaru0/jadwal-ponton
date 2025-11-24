@@ -166,7 +166,7 @@ class Chatbot {
                 if (data.promptFeedback && data.promptFeedback.blockReason) {
                     return "Maaf, pertanyaan Anda terdeteksi melanggar kebijakan konten keamanan.";
                 }
-                return "Maaf, saya tidak bisa menjawab saat ini.";
+                return "Maaf, ada gangguan server, coba beberapa saat lagi atau bisa hubungi nomor petugas.";
             }
 
         } catch (error) {
