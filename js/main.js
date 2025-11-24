@@ -21,6 +21,7 @@ function initializeApp() {
   renderSchedules();
   startCountdown();
   renderSavedRequests();
+  renderRouteInfo();
   
   // --- FITUR BARU ---
   initializeChatbot();
