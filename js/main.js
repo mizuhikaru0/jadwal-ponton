@@ -2,6 +2,7 @@
 
 import { updateTheme, toggleTheme } from "./theme.js";
 import { renderSchedules, startCountdown, initAudioContext } from "./schedule.js"; 
+import { renderRouteInfo } from "./rute.js";
 import { renderSavedRequests, handleWaitRequest } from "./waitRequest.js";
 import Chatbot from "./chatbot.js";
 
@@ -97,8 +98,8 @@ function initializeChatbot() {
              btn.onclick = () => {
                  if(chatInput) {
                     chatInput.value = q;
-                    // Trigger submit manual
-                    chatForm.dispatchEvent(new Event('submit'));
+                // Trigger submit manual jika form ada
+                if (chatForm) chatForm.dispatchEvent(new Event('submit'));
                  }
              };
              chipsContainer.appendChild(btn);
