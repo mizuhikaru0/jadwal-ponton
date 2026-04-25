@@ -142,7 +142,7 @@ ${waitPolicyText}
                     "Authorization": `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    model: "gpt-4o-mini", // ganti kalau perlu
+                    model: "gpt-4.1-mini", // ganti kalau perlu
                     messages: messages,
                     temperature: 0.7
                 })
