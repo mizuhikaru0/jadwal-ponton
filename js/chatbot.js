@@ -28,150 +28,142 @@ const waitPolicyData = [
 
 class Chatbot {
     constructor() {
-        // --- KONFIGURASI KE SERVER LOKAL ---
-        this.apiUrl = "http://localhost:3000/api/chat";
+        this.apiUrl = "https://api.koboillm.com/v1/chat/completions";
+        this.apiKey = "sk-xo2lRBHFgnnvY9PhkeIftg";
     }
 
     generateSystemPrompt() {
-        // 1. Format Data Jadwal
         let jadwalText = "";
         Object.keys(scheduleData).forEach(route => {
             jadwalText += `- Rute ${formatRouteName(route)}: ${scheduleData[route].join(", ")} WIB\n`;
         });
 
-        // 2. Format Data Tarif
         let tarifText = "";
         tariffData.forEach(t => {
             let hargaStr = t.price;
             const priceClean = t.price.replace(/\D/g, '');
             if (priceClean && !isNaN(priceClean) && t.price.toLowerCase() !== "tidak ada") {
-                 hargaStr = "Rp " + new Intl.NumberFormat('id-ID').format(priceClean);
+                hargaStr = "Rp " + new Intl.NumberFormat('id-ID').format(priceClean);
             }
             tarifText += `- ${t.description}: ${hargaStr}\n`;
         });
 
-        // 3. Format Data Rute
         let ruteText = "";
         routeInfo.routes.forEach(r => {
             ruteText += `- ${r.name}: ${r.details[0]}\n`;
         });
 
-        // 4. Format Data Kontak
         let kontakText = "";
         contacts.forEach(c => {
-            kontakText += `- ${c.name}: ${c.display} (Nomor WA: ${c.number})\n`;
+            kontakText += `- ${c.name}: ${c.display} (WA: ${c.number})\n`;
         });
 
-        // 5. Format Data Peraturan Umum
         let rulesText = "";
         rulesData.forEach(rule => {
             rulesText += `- ${rule}\n`;
         });
 
-        // 6. Format Data Kebijakan Tunggu
         let waitPolicyText = "";
         waitPolicyData.forEach(item => {
             waitPolicyText += `- ${item}\n`;
         });
 
         return `
-        Kamu adalah "Asisten Virtual Ponton".
-        Tugas utama: Menjawab pertanyaan pengguna seputar Jadwal, Tarif, Rute, Kontak, Peraturan, dan Kebijakan Tunggu.
+Kamu adalah "Asisten Virtual Ponton".
 
-        === ATURAN MENJAWAB ===
-        1. Jawab dengan ramah, singkat, leluasa, gunakan Bahasa Indonesia.
-        2. Gunakan data di bawah ini sebagai sumber kebenaran mutlak, tapi kamu bisa menjawab lebih fleksibel, selama tidak melenceng dari data.
-        3. Jika ditanya hal di luar topik, tolak dengan sopan.
-        4. Kenali waktu terkini saat menjawab ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}.
+Tugas utama:
+Menjawab pertanyaan seputar Jadwal, Tarif, Rute, Kontak, Peraturan, dan Kebijakan Tunggu.
 
-        === DATA JADWAL ===
-        ${jadwalText}
-        (PENTING: Khusus hari Jumat, jadwal jam 13:00 SELALU mundur menjadi 13:30 WIB).
+ATURAN:
+- Jawab singkat, jelas, ramah
+- Gunakan Bahasa Indonesia
+- Jangan mengarang di luar data
+- Tolak jika di luar topik
 
-        === DATA TARIF ===
-        ${tarifText}
+Waktu saat ini:
+${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
 
-        === DATA RUTE ===
-        ${ruteText}
+=== JADWAL ===
+${jadwalText}
+(Penting: Jumat jam 13:00 jadi 13:30)
 
-        === KONTAK PETUGAS ===
-        ${kontakText}
+=== TARIF ===
+${tarifText}
 
-        === DATA PERATURAN UMUM ===
-        ${rulesText}
+=== RUTE ===
+${ruteText}
 
-        === KEBIJAKAN MINTA TUNGGU / PENUNDAAN JADWAL ===
-        ${waitPolicyText}
-        (Penting: Tegaskan soal batas 5 menit kecuali untuk kondisi darurat yang disebutkan di atas).
-        `;
+=== KONTAK ===
+${kontakText}
+
+=== PERATURAN ===
+${rulesText}
+
+=== KEBIJAKAN TUNGGU ===
+${waitPolicyText}
+(Batas normal 5 menit kecuali darurat)
+`;
     }
 
     async getResponse(userMessage, chatHistory = []) {
-        if (!userMessage.trim()) return "Silakan ketik pertanyaan Anda.";
+        if (!userMessage.trim()) return "Silakan ketik pertanyaan.";
 
-        const systemInstruction = this.generateSystemPrompt();
+        const systemPrompt = this.generateSystemPrompt();
 
-        const contents = [
-            {
-                role: "user",
-                parts: [{ text: systemInstruction }]
-            },
-            {
-                role: "model",
-                parts: [{ text: "Baik, saya mengerti. Saya siap membantu pengguna." }]
-            }
-        ];
+        const messages = [];
 
-        const recentHistory = chatHistory.slice(-4);
-        recentHistory.forEach(msg => {
-            const role = msg.type === "user" ? "user" : "model";
-            if(msg.text && msg.text.trim()) {
-                contents.push({
-                    role: role,
-                    parts: [{ text: msg.text }]
+        // System
+        messages.push({
+            role: "system",
+            content: systemPrompt
+        });
+
+        // History (maks 4)
+        chatHistory.slice(-4).forEach(msg => {
+            if (msg.text && msg.text.trim()) {
+                messages.push({
+                    role: msg.type === "user" ? "user" : "assistant",
+                    content: msg.text
                 });
             }
         });
 
-        contents.push({
+        // User input
+        messages.push({
             role: "user",
-            parts: [{ text: userMessage }]
+            content: userMessage
         });
-
-        const requestBody = { contents: contents };
 
         try {
             const response = await fetch(this.apiUrl, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(requestBody)
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${this.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o-mini", // ganti kalau perlu
+                    messages: messages,
+                    temperature: 0.7
+                })
             });
 
             if (!response.ok) {
-                let pesanError = "Terjadi kesalahan sistem.";
-                if (response.status === 429) pesanError = "⚠️ Terlalu banyak permintaan.";
-                else if (response.status === 500) pesanError = "⚠️ Server backend bermasalah.";
-                throw new Error(pesanError);
+                if (response.status === 401) return "⚠️ API Key tidak valid.";
+                if (response.status === 429) return "⚠️ Terlalu banyak request.";
+                if (response.status === 500) return "⚠️ Server Kobo error.";
+                return "⚠️ Gagal request ke server.";
             }
 
             const data = await response.json();
 
-            if (data.candidates && 
-                data.candidates.length > 0 && 
-                data.candidates[0].content && 
-                data.candidates[0].content.parts && 
-                data.candidates[0].content.parts.length > 0) {
-                return data.candidates[0].content.parts[0].text;
-            } else {
-                if (data.promptFeedback && data.promptFeedback.blockReason) {
-                    return "Maaf, pertanyaan Anda terdeteksi melanggar kebijakan konten keamanan.";
-                }
-                return "Maaf, ada gangguan server, coba beberapa saat lagi atau bisa hubungi nomor petugas.";
-            }
+            const reply = data.choices?.[0]?.message?.content;
+
+            return reply || "Tidak ada respon dari AI.";
 
         } catch (error) {
-            console.error("Error Fetch:", error);
-            return "Maaf, tidak dapat terhubung ke server. Pastikan terminal 'node server.js' sedang berjalan."; 
+            console.error(error);
+            return "Gagal koneksi ke AI (kemungkinan CORS).";
         }
     }
 }
