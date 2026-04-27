@@ -32,78 +32,72 @@ class Chatbot {
         this.apiKey = "sk-xo2lRBHFgnnvY9PhkeIftg";
     }
 
-    generateSystemPrompt() {
-        let jadwalText = "";
-        Object.keys(scheduleData).forEach(route => {
-            jadwalText += `- Rute ${formatRouteName(route)}: ${scheduleData[route].join(", ")} WIB\n`;
-        });
+   generateSystemPrompt() {
+    let jadwalText = "";
+    Object.keys(scheduleData).forEach(route => {
+        jadwalText += `- ${formatRouteName(route)}: ${scheduleData[route].join(", ")} WIB\n`;
+    });
 
-        let tarifText = "";
-        tariffData.forEach(t => {
-            let hargaStr = t.price;
-            const priceClean = t.price.replace(/\D/g, '');
-            if (priceClean && !isNaN(priceClean) && t.price.toLowerCase() !== "tidak ada") {
-                hargaStr = "Rp " + new Intl.NumberFormat('id-ID').format(priceClean);
-            }
-            tarifText += `- ${t.description}: ${hargaStr}\n`;
-        });
+    let tarifText = "";
+    tariffData.forEach(t => {
+        let hargaStr = t.price;
+        const priceClean = t.price.replace(/\D/g, '');
+        if (priceClean && !isNaN(priceClean) && t.price.toLowerCase() !== "tidak ada") {
+            hargaStr = "Rp " + new Intl.NumberFormat('id-ID').format(priceClean);
+        }
+        tarifText += `- ${t.description}: ${hargaStr}\n`;
+    });
 
-        let ruteText = "";
-        routeInfo.routes.forEach(r => {
-            ruteText += `- ${r.name}: ${r.details[0]}\n`;
-        });
+    let ruteText = "";
+    routeInfo.routes.forEach(r => {
+        ruteText += `- ${r.name}: ${r.details[0]}\n`;
+    });
 
-        let kontakText = "";
-        contacts.forEach(c => {
-            kontakText += `- ${c.name}: ${c.display} (WA: ${c.number})\n`;
-        });
+    let kontakText = "";
+    contacts.forEach(c => {
+        kontakText += `- ${c.name}: ${c.display}\n`;
+    });
 
-        let rulesText = "";
-        rulesData.forEach(rule => {
-            rulesText += `- ${rule}\n`;
-        });
+    let rulesText = rulesData.map(r => `- ${r}`).join("\n");
+    let waitPolicyText = waitPolicyData.map(w => `- ${w}`).join("\n");
 
-        let waitPolicyText = "";
-        waitPolicyData.forEach(item => {
-            waitPolicyText += `- ${item}\n`;
-        });
+    return `
+Kamu adalah asisten ponton yang berbicara seperti manusia biasa (bukan robot).
 
-        return `
-Kamu adalah "Asisten Virtual Ponton".
+Gaya bicara:
+- Santai tapi sopan
+- Natural, tidak kaku
+- Boleh pakai sedikit variasi bahasa sehari-hari
+- Jangan terlalu formal atau seperti template
 
-Tugas utama:
-Menjawab pertanyaan seputar Jadwal, Tarif, Rute, Kontak, Peraturan, dan Kebijakan Tunggu.
+Aturan:
+- Jawab berdasarkan data di bawah
+- Jangan mengarang
+- Jika tidak tahu, bilang tidak tahu
+- Jawaban cukup singkat tapi enak dibaca
 
-ATURAN:
-- Jawab singkat, jelas, ramah
-- Gunakan Bahasa Indonesia
-- Jangan mengarang di luar data
-- Tolak jika di luar topik
+Data:
 
-Waktu saat ini:
-${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
-
-=== JADWAL ===
+[JADWAL]
 ${jadwalText}
-(Penting: Jumat jam 13:00 jadi 13:30)
+(Jumat 13:00 → 13:30)
 
-=== TARIF ===
+[TARIF]
 ${tarifText}
 
-=== RUTE ===
+[RUTE]
 ${ruteText}
 
-=== KONTAK ===
+[KONTAK]
 ${kontakText}
 
-=== PERATURAN ===
+[PERATURAN]
 ${rulesText}
 
-=== KEBIJAKAN TUNGGU ===
+[KEBIJAKAN TUNGGU]
 ${waitPolicyText}
-(Batas normal 5 menit kecuali darurat)
 `;
-    }
+}
 
     async getResponse(userMessage, chatHistory = []) {
         if (!userMessage.trim()) return "Silakan ketik pertanyaan.";
