@@ -30,7 +30,7 @@ const waitPolicyData = [
 class Chatbot {
     constructor() {
         this.apiUrl = "https://api.koboillm.com/v1/chat/completions";
-        this.apiKey = "YOUR_API_KEY";
+        this.apiKey = "sk-EwcgeiLbTf_H95dGqdR4Xw";
     }
 
     // =========================
@@ -213,7 +213,7 @@ Cara jawab:
                     "Authorization": `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    model: "gpt-4.1-mini",
+                    model: "gemini/gemini-2.0-flash-lite",
                     messages,
                     temperature: 0.9,
                     presence_penalty: 0.6,
