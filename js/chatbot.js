@@ -29,13 +29,11 @@ const waitPolicyData = [
 
 class Chatbot {
     constructor() {
-        this.apiUrl = "https://api.koboillm.com/v1/chat/completions";
-        this.apiKey = "sk-EwcgeiLbTf_H95dGqdR4Xw";
+        // 🔥 GANTI DENGAN URL REPLIT KAMU
+        this.apiUrl = "https://37ac42c7-77f8-4d5b-8010-7026765f2cc6-00-3k2wies6ph91m.riker.replit.dev/api/chat";
     }
 
-    // =========================
-    // ⏱️ WAKTU REAL-TIME
-    // =========================
+    // ⏱️ Waktu
     getCurrentTime() {
         return new Date().toLocaleString('id-ID', {
             timeZone: 'Asia/Jakarta',
@@ -56,13 +54,10 @@ class Chatbot {
                 return time;
             }
         }
-
         return null;
     }
 
-    // =========================
-    // 🔍 DETEKSI INTENT
-    // =========================
+    // 🔍 Intent
     detectIntent(message) {
         const msg = message.toLowerCase();
 
@@ -77,71 +72,57 @@ class Chatbot {
         return "umum";
     }
 
-    // =========================
-    // 📦 CONTEXT DINAMIS
-    // =========================
+    // 📦 Context
     buildContext(intent) {
         let text = "";
         const now = this.getCurrentTime();
 
-        // REAL-TIME ONLY
         if (intent === "jadwal_realtime") {
             text += `Waktu sekarang: ${now}\n\n`;
 
             Object.keys(scheduleData).forEach(route => {
                 const next = this.getNextDeparture(scheduleData[route]);
-
-                if (next) {
-                    text += `- ${formatRouteName(route)}: berikutnya jam ${next}\n`;
-                } else {
-                    text += `- ${formatRouteName(route)}: sudah tidak ada jadwal lagi hari ini\n`;
-                }
+                text += `- ${formatRouteName(route)}: ${next || "Selesai hari ini"}\n`;
             });
 
             return text;
         }
 
-        // JADWAL NORMAL
         if (intent === "jadwal" || intent === "umum") {
             Object.keys(scheduleData).forEach(route => {
                 const next = this.getNextDeparture(scheduleData[route]);
 
                 text += `- ${formatRouteName(route)}:
-  Jadwal: ${scheduleData[route].join(", ")} WIB
-  Berikutnya: ${next || "Selesai hari ini"}
+Jadwal: ${scheduleData[route].join(", ")} WIB
+Berikutnya: ${next || "Selesai hari ini"}
 `;
             });
 
             text += `\nWaktu sekarang: ${now}\n`;
         }
 
-        // TARIF
         if (intent === "tarif" || intent === "umum") {
             tariffData.forEach(t => {
                 text += `- ${t.description}: ${t.price}\n`;
             });
         }
 
-        // RUTE
         if (intent === "rute" || intent === "umum") {
             routeInfo.routes.forEach(r => {
                 text += `- ${r.name}: ${r.details[0]}\n`;
             });
         }
 
-        // KONTAK
         if (intent === "kontak" || intent === "umum") {
             contacts.forEach(c => {
                 text += `- ${c.name}: ${c.display}\n`;
             });
         }
 
-        // ATURAN
         if (intent === "aturan" || intent === "umum") {
             text += rulesData.map(r => `- ${r}`).join("\n") + "\n";
         }
 
-        // TUNGGU
         if (intent === "tunggu" || intent === "umum") {
             text += waitPolicyData.map(w => `- ${w}`).join("\n") + "\n";
         }
@@ -149,35 +130,30 @@ class Chatbot {
         return text;
     }
 
-    // =========================
-    // 🧠 PROMPT (RINGKAS & NATURAL)
-    // =========================
+    // 🧠 Prompt
     generateSystemPrompt() {
         return `
 Kamu asisten ponton.
 
 Gaya:
 - Santai, natural, seperti ngobrol
-- Bisa bercanda ringan kalau cocok
+- Boleh sedikit bercanda
 - Tidak kaku
 
 Aturan:
-- Jawab hanya dari data yang diberikan
+- Jawab hanya dari data
 - Jangan mengarang
 - Kalau tidak tahu, bilang jujur
 - Di luar topik: tolak santai
 
-Cara jawab:
-- Fokus ke pertanyaan user
-- Gunakan info waktu jika ada
+Jawaban:
 - Singkat, jelas
-- Boleh 1 emoji
+- Fokus ke pertanyaan
+- Maks 1 emoji
 `;
     }
 
-    // =========================
-    // 🤖 RESPONSE
-    // =========================
+    // 🤖 Response
     async getResponse(userMessage, chatHistory = []) {
         if (!userMessage.trim()) return "Tulis dulu pertanyaannya ya 😊";
 
@@ -190,7 +166,6 @@ Cara jawab:
             { role: "system", content: `DATA:\n${contextData}` }
         ];
 
-        // history dibatasi (hemat token)
         chatHistory.slice(-4).forEach(msg => {
             if (msg.text?.trim()) {
                 messages.push({
@@ -209,23 +184,17 @@ Cara jawab:
             const response = await fetch(this.apiUrl, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.apiKey}`
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
                     model: "gemini/gemini-2.0-flash-lite",
-                    messages,
-                    temperature: 0.9,
-                    presence_penalty: 0.6,
-                    frequency_penalty: 0.3
+                    messages: messages,
+                    temperature: 0.9
                 })
             });
 
             if (!response.ok) {
-                if (response.status === 401) return "API key bermasalah.";
-                if (response.status === 429) return "Lagi ramai, coba lagi ya 😄";
-                if (response.status === 500) return "Server lagi error.";
-                return "Gagal ambil respon.";
+                return "Server lagi sibuk, coba lagi ya 😄";
             }
 
             const data = await response.json();
@@ -233,7 +202,7 @@ Cara jawab:
 
         } catch (error) {
             console.error(error);
-            return "Koneksi ke AI gagal.";
+            return "Koneksi ke server gagal.";
         }
     }
 }
