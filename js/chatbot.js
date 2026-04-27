@@ -6,24 +6,25 @@ import { scheduleData, formatRouteName } from "./schedule.js";
 
 // Data Kontak
 const contacts = [
-    { name: "Riko (Nahkoda)", number: "6282252869605", display: "0822 5286 9605" },
-    { name: "Ihsan Maulana (ABK)", number: "6282211061254", display: "0822 1106 1254" }
+    { name: "Riko (Nahkoda)", display: "0822 5286 9605" },
+    { name: "Ihsan Maulana (ABK)", display: "0822 1106 1254" }
 ];
 
-// Data Peraturan Umum
+// Peraturan
 const rulesData = [
-    "Penumpang boleh naik ke atas ruang sopir atau nahkoda tapi dengan aturan yang berlaku.",
+    "Penumpang boleh naik ke atas ruang nahkoda dengan aturan berlaku.",
     "Dilarang merokok di ruangan nahkoda.",
-    "Penumpang wajib mengikuti instruksi dari Nahkoda dan ABK.",
-    "Barang bawaan basah seperti udang, ikan yang masih meneteskan air, kendaraan motornya harus diparkir di bagian paling depan kapal ponton.",
-    "Pembayaran tarif hanya dilayani secara tunai di loket."
+    "Wajib mengikuti instruksi petugas.",
+    "Barang basah harus di bagian depan.",
+    "Pembayaran hanya tunai di loket."
 ];
 
+// Kebijakan tunggu
 const waitPolicyData = [
-    "Penumpang dapat meminta pelonggaran jadwal (minta tunggu) dengan menghubungi petugas.",
-    "Toleransi waktu tunggu standar adalah MAKSIMAL 5 menit (Tidak boleh lebih).",
-    "PENGECUALIAN KHUSUS (Sangat Urgent): Jika ada keluarga meninggal, kecelakaan, melahirkan, atau sakit parah.",
-    "Untuk kondisi urgent di atas, toleransi waktu bisa lebih dari 5 menit, TETAPI wajib berunding/konfirmasi dulu dengan petugas."
+    "Bisa minta tunggu lewat petugas.",
+    "Maksimal 5 menit.",
+    "Darurat: kecelakaan, sakit, melahirkan, meninggal.",
+    "Harus konfirmasi petugas."
 ];
 
 class Chatbot {
@@ -32,95 +33,104 @@ class Chatbot {
         this.apiKey = "sk-xo2lRBHFgnnvY9PhkeIftg";
     }
 
+    // 🔍 DETEKSI INTENT
+    detectIntent(message) {
+        const msg = message.toLowerCase();
+
+        if (msg.includes("jadwal")) return "jadwal";
+        if (msg.includes("tarif") || msg.includes("harga")) return "tarif";
+        if (msg.includes("rute")) return "rute";
+        if (msg.includes("kontak") || msg.includes("telepon")) return "kontak";
+        if (msg.includes("aturan")) return "aturan";
+        if (msg.includes("tunggu")) return "tunggu";
+
+        return "umum";
+    }
+
+    // 📦 CONTEXT DINAMIS
+    buildContext(intent) {
+        let text = "";
+
+        if (intent === "jadwal" || intent === "umum") {
+            Object.keys(scheduleData).forEach(route => {
+                text += `- ${formatRouteName(route)}: ${scheduleData[route].join(", ")} WIB\n`;
+            });
+            text += "Catatan: Jumat 13:00 jadi 13:30\n";
+        }
+
+        if (intent === "tarif" || intent === "umum") {
+            tariffData.forEach(t => {
+                text += `- ${t.description}: ${t.price}\n`;
+            });
+        }
+
+        if (intent === "rute" || intent === "umum") {
+            routeInfo.routes.forEach(r => {
+                text += `- ${r.name}: ${r.details[0]}\n`;
+            });
+        }
+
+        if (intent === "kontak" || intent === "umum") {
+            contacts.forEach(c => {
+                text += `- ${c.name}: ${c.display}\n`;
+            });
+        }
+
+        if (intent === "aturan" || intent === "umum") {
+            text += rulesData.map(r => `- ${r}`).join("\n") + "\n";
+        }
+
+        if (intent === "tunggu" || intent === "umum") {
+            text += waitPolicyData.map(w => `- ${w}`).join("\n") + "\n";
+        }
+
+        return text;
+    }
+
+    // 🧠 PROMPT RINGKAS (HEMAT TOKEN)
     generateSystemPrompt() {
-        let jadwalText = "";
-        Object.keys(scheduleData).forEach(route => {
-            jadwalText += `- Rute ${formatRouteName(route)}: ${scheduleData[route].join(", ")} WIB\n`;
-        });
-
-        let tarifText = "";
-        tariffData.forEach(t => {
-            let hargaStr = t.price;
-            const priceClean = t.price.replace(/\D/g, '');
-            if (priceClean && !isNaN(priceClean) && t.price.toLowerCase() !== "tidak ada") {
-                hargaStr = "Rp " + new Intl.NumberFormat('id-ID').format(priceClean);
-            }
-            tarifText += `- ${t.description}: ${hargaStr}\n`;
-        });
-
-        let ruteText = "";
-        routeInfo.routes.forEach(r => {
-            ruteText += `- ${r.name}: ${r.details[0]}\n`;
-        });
-
-        let kontakText = "";
-        contacts.forEach(c => {
-            kontakText += `- ${c.name}: ${c.display} (WA: ${c.number})\n`;
-        });
-
-        let rulesText = "";
-        rulesData.forEach(rule => {
-            rulesText += `- ${rule}\n`;
-        });
-
-        let waitPolicyText = "";
-        waitPolicyData.forEach(item => {
-            waitPolicyText += `- ${item}\n`;
-        });
-
         return `
-Kamu adalah "Asisten Virtual Ponton".
+Kamu asisten ponton.
 
-Tugas utama:
-Menjawab pertanyaan seputar Jadwal, Tarif, Rute, Kontak, Peraturan, dan Kebijakan Tunggu.
+Gaya:
+- Santai, natural, seperti ngobrol
+- Bisa bercanda ringan kalau cocok
+- Tidak kaku
 
-ATURAN:
-- Jawab singkat, jelas, ramah
-- Gunakan Bahasa Indonesia
-- Jangan mengarang di luar data
-- Tolak jika di luar topik
+Aturan:
+- Jawab hanya dari data yang diberikan
+- Jangan mengarang
+- Jika tidak ada data, bilang jujur
+- Topik di luar: tolak dengan santai
 
-Waktu saat ini:
-${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
-
-=== JADWAL ===
-${jadwalText}
-(Penting: Jumat jam 13:00 jadi 13:30)
-
-=== TARIF ===
-${tarifText}
-
-=== RUTE ===
-${ruteText}
-
-=== KONTAK ===
-${kontakText}
-
-=== PERATURAN ===
-${rulesText}
-
-=== KEBIJAKAN TUNGGU ===
-${waitPolicyText}
-(Batas normal 5 menit kecuali darurat)
+Jawaban:
+- Langsung ke inti
+- Gaya ngobrol
+- Boleh 1 emoji ringan
 `;
     }
 
     async getResponse(userMessage, chatHistory = []) {
-        if (!userMessage.trim()) return "Silakan ketik pertanyaan.";
+        if (!userMessage.trim()) return "Tulis dulu pertanyaannya ya 😊";
 
+        const intent = this.detectIntent(userMessage);
+        const contextData = this.buildContext(intent);
         const systemPrompt = this.generateSystemPrompt();
 
-        const messages = [];
+        const messages = [
+            {
+                role: "system",
+                content: systemPrompt
+            },
+            {
+                role: "system",
+                content: `DATA:\n${contextData}`
+            }
+        ];
 
-        // System
-        messages.push({
-            role: "system",
-            content: systemPrompt
-        });
-
-        // History (maks 4)
+        // history maksimal 4 biar hemat
         chatHistory.slice(-4).forEach(msg => {
-            if (msg.text && msg.text.trim()) {
+            if (msg.text?.trim()) {
                 messages.push({
                     role: msg.type === "user" ? "user" : "assistant",
                     content: msg.text
@@ -128,7 +138,6 @@ ${waitPolicyText}
             }
         });
 
-        // User input
         messages.push({
             role: "user",
             content: userMessage
@@ -142,28 +151,27 @@ ${waitPolicyText}
                     "Authorization": `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    model: "gpt-4.1-mini", // ganti kalau perlu
-                    messages: messages,
-                    temperature: 0.7
+                    model: "gpt-4.1-mini",
+                    messages,
+                    temperature: 0.9,
+                    presence_penalty: 0.6,
+                    frequency_penalty: 0.3
                 })
             });
 
             if (!response.ok) {
-                if (response.status === 401) return "⚠️ API Key tidak valid.";
-                if (response.status === 429) return "⚠️ Terlalu banyak request.";
-                if (response.status === 500) return "⚠️ Server Kobo error.";
-                return "⚠️ Gagal request ke server.";
+                if (response.status === 401) return "API key bermasalah.";
+                if (response.status === 429) return "Lagi ramai, coba lagi ya 😄";
+                if (response.status === 500) return "Server lagi error.";
+                return "Gagal ambil respon.";
             }
 
             const data = await response.json();
-
-            const reply = data.choices?.[0]?.message?.content;
-
-            return reply || "Tidak ada respon dari AI.";
+            return data.choices?.[0]?.message?.content || "AI lagi diem 😅";
 
         } catch (error) {
             console.error(error);
-            return "Gagal koneksi ke AI (kemungkinan CORS).";
+            return "Koneksi ke AI gagal.";
         }
     }
 }
