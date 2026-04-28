@@ -6,7 +6,6 @@ import { renderRouteInfo } from "./rute.js";
 import { renderSavedRequests, handleWaitRequest } from "./waitRequest.js";
 import Chatbot from "./chatbot.js";
 
-// Expose ke window agar bisa dipanggil via onclick HTML
 window.toggleTheme = toggleTheme;
 
 const waitRequestForm = document.getElementById("waitRequestForm");
@@ -18,7 +17,7 @@ if (waitRequestForm) {
 function initializeApp() {
   updateTheme();
   
-  // --- FITUR PENTING LAMA (JANGAN DIHAPUS) ---
+
   renderSchedules();
   startCountdown();
   renderSavedRequests();
